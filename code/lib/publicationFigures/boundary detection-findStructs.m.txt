@@ -1,0 +1,31 @@
+1. recruitments
+
+2. 5x5 conv
+
+3. boundary
+
+4. boundary convolved with 3x3
+
+5. boundary substracted from 5x5 conv (step2)
+
+ - small or sparse structures eliminated
+
+ - each structure is processed with the following steps individually
+
+6. recruitments
+
+7. convolved with 3x3
+
+8. converted to binary
+
+9. inverted
+
+10. convolved with 3x3
+
+11. converted to binary
+
+12. inverted
+
+13. boundary detected
+
+In order to find the boundaries of the structures, the recruitment images are convolved with a 3x3 matrix and converted to binary. The resulting image is inverted and convolved with a 3x3 matrix and converted to binary. The resulting image is inverted again. The boundaries of the resulting shape gave the structure boundaries

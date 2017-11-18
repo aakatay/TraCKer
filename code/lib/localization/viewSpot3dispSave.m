@@ -1,0 +1,13 @@
+
+
+G0reg = double(G0reg);
+save('spotInfo','frstSpot','yCoor2by2','xCoor2by2','yCoor3by3','xCoor3by3','errCenter',...
+    'errFit7by7','funSpNonReg','funSpReg','G0reg','G0nonReg','spReg7by7','fitVal','frm','nSpts',...
+    'pixMaxX','pixMaxY','exitflag','SP','intPeak','data9by9blur','fit9by9reg','IntFlatBckgrndDiff9by9',...
+    'err2by2','x7x1','x7x2','IntFlatBckgrnd','xBckgrnd','yBckgrnd',...
+        'LB', 'UB','xSHOW');
+save_spotSel
+
+
+
+

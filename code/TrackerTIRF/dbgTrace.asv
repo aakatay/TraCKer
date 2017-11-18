@@ -1,0 +1,34 @@
+clear all;
+close all;
+
+
+tx = 1; % trace indices
+N = 100;
+for i = 1 : N 
+    tx = i;
+    % (2) TrackerTIRF.m
+    load traceDbg0; % trInf [traceData0*.mat]
+    trInf2 = trInf; clear trInf;
+    load traceDbg; % TraceX2 TraceY2 (traceJmplessData*.mat)
+
+    ix1 = trInf2(tx,3);
+    ix2 = trInf2(tx,2)+ix1-1;
+
+    x2 = TraceX2(ix1:ix2)';
+    y2 = TraceY2(ix1:ix2)';
+
+    % (1) rtTraCKerTrace.m
+    load('traceData_shft3.5_0017.mat') 
+    x = TraceX{tx}';
+    y = TraceY{tx}';
+
+
+    if numel(x2) ~= numel(x)
+        [x2 x y2 y]
+    else
+        
+    end
+        
+    
+    pause
+end

@@ -1,0 +1,28 @@
+
+
+%% load traces
+    FN = dir('traceData*.mat');
+    n=  numel(FN);
+    IX = [];
+
+    for i = 1:n
+        fn = FN(i).name;
+        IX  = [IX; str2num(fn(end-7:end-4))];
+    end
+    [~,IXs] =sort(IX);
+    FN = FN(IXs);
+
+    for i = 1:n % check 
+        fn = FN(i).name;
+        IX  = [IX; str2num(fn(end-7:end-4))];
+    end
+    
+    load(FN(end).name)
+    tx = TraceX; ty = TraceY; tr = trInf;
+    clear TraceX TraceY;
+    nt = size(trInf,1);
+    for i = 1:nt
+        x = tx{1};
+        
+        TraceX(1:)
+    end
