@@ -6,8 +6,8 @@ close all;
 % 2: in postprocess folder run  isOverlay = 0; isRT = 0;
 % 3: copy outputs to the same folder run isOverlay = 1
 
-isOverlay = 0;
-isRT = 1;
+isOverlay = 1;
+isRT = 0;
 A = zeros(50);
 
 % output fles
@@ -46,7 +46,7 @@ else
 
         end
         stackWrite(A,posRTfn)
-        save('posRT','xxRT','yyRT')
+        save(posRT,'xxRT')
     else
         fn = dir('xyzDataGaus-*.mat');
         load(fn.name)
@@ -67,9 +67,5 @@ else
             %imagesc(A(:,:,i)); pause(1)
         end
         stackWrite(A,posFN)
-        save('pos','xx','yy')
     end
 end
-
-%[xx' xxRT' yy' yyRT']
-%[xx'-xxRT' yy'-yyRT']

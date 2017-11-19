@@ -1,7 +1,10 @@
-
-
+% converts realtime data to post process data 
+% + for TraCKerTIRFdisp.m
+clear all;
+close all;
+fnTraceDataOUT = '..\..\..\traceDataRT';
 %% load traces
-    FN = dir('traceData*.mat');
+    FN = dir('traceData_*.mat');
     n=  numel(FN);
     IX = [];
 
@@ -28,8 +31,9 @@
         L = numel(x); % number of frames
         TraceX(ix:ix+L-1) = x;
         TraceY(ix:ix+L-1) = y;
-        ix = ix + L;
         trInf(i,3) = ix;
+        ix = ix + L;
     end
     
-    save('traceDataRT','TraceX','TraceY','trInf');
+    save(fnTraceDataOUT,'TraceX','TraceY','trInf');
+    cd('..\..\..\')

@@ -13,7 +13,7 @@ if ~exist('last_')
 else
     label= fname(last_:end-4);
 end
-Coeff_ = Coeff(1);
+Coeff_ = CoeffFit(1);
 traceJmplessDataFileNm = sprintf('traceJmplessData-coeff%d%s.mat',round(Coeff_),label);
 traceDataFileNm = sprintf('traceData-coeff%d%s.mat',round(Coeff_),label);
 traceDataFileNm0 = sprintf('traceData0-coeff%d%s.mat',round(Coeff_),label);

@@ -81,7 +81,7 @@ cd('E:\MATLAB\TIRFcalibration\data\Ata01_5_125X100Y50x50_realtime')
         for m = 1:nSPOTs(n) % number of spots
             Xc=XC(m);       % current
             Yc=YC(m);       % 
-            n1 = n-dn-1;
+            n1 = n-dn;
             n2 = n-1;
             if n1<1, n1 = 1; end
             if n2<1, n2 = 1; end
@@ -111,7 +111,7 @@ cd('E:\MATLAB\TIRFcalibration\data\Ata01_5_125X100Y50x50_realtime')
 
             % check for new trace
             isNewTrace = 0;
-            ixSptTr = nan(1,dn+2);
+            ixSptTr = nan(1,dn+1);
             ixSptTr(end) = ixSptFrm(n)+m-1;
             if ~isAdd2Trace
                 for l=1:numel(NS) % earlier frames

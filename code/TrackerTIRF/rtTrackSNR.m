@@ -3,11 +3,11 @@
 function rtTrackSNR
 
 cd('E:\MATLAB\TIRFcalibration\data\Ata01_5_125X100Y50x50_realtime')    
-% F = findall(0,'type','figure'); delete(F);
+F = findall(0,'type','figure'); delete(F);
     
     cd waSeq\tracker\rtData
-
-    dbgSNRimg = 1; % SNR movie
+    dbgSel = 0;
+    dbgSNRimg = 0; % SNR movie
     dbgSNR = 0; % intensity traces
     SNRmul = 1000; % for intesity scale 'SNRimg.tif'
     nt0 = 3000; % # of traces to initialize
@@ -164,7 +164,7 @@ cd('E:\MATLAB\TIRFcalibration\data\Ata01_5_125X100Y50x50_realtime')
         if isempty(ixSM), continue; end
 
         %% crop single molecule windows
-        if dbgSNRimg, snrImg = zeros(szXYmag); end
+        
         m = 1; % SM index for SNR
         tt =0;
         Xs = []; Ys = []; Frm = []; TRinf = []; B = []; INT = []; SNR = []; MIX = [];
@@ -197,17 +197,17 @@ cd('E:\MATLAB\TIRFcalibration\data\Ata01_5_125X100Y50x50_realtime')
             aIXix( (   (n-frm1(aIXix)+1)<stdWin   )) = []; % remove SM shorter than stdWin
             aIXix( (   frm2(aIXix) < n  )) = []; % remove SM bleach before the current frame (n)
             mlast = m;
-            snrImg = zeros(szXYmag);
+            if dbgSNRimg, snrImg = zeros(szXYmag); end
             num_ixImg2(n) = 0;
             for j = 1:numel(aIXix) % for each SM 
                 ix = aIXix(j);
                 fr = fIX{ix}; % frames
                 if fr(end) ~= n, 
-                    disp('1nodata');
+                    if dbgSel, disp('1nodata'); end
                     continue; end % no data in this frame
-                if numel(fr)-stdWin+1 < 1,disp('2notenough'); continue; end % not enough data
+                if numel(fr)-stdWin+1 < 1,if dbgSel,disp('2notenough');end; continue; end % not enough data
                 if fr(end)-stdWin+1 ~= fr(end-stdWin+1) % missing data in the last stdWin frames
-                    disp('3missingdata'); 
+                    if dbgSel,disp('3missingdata'); end
                     continue;
                 end
                 num_ixImg2(n) = num_ixImg2(n) + 1;
@@ -226,8 +226,8 @@ cd('E:\MATLAB\TIRFcalibration\data\Ata01_5_125X100Y50x50_realtime')
                 b = mean(astd); % background std
                 snr = peak/sqrt(peak+b^2);
 
-                Xs(m) = ceil(cellfun(@(v) v(end), X(ix)))
-                Ys(m) = ceil(cellfun(@(v) v(end), Y(ix)))
+                Xs(m) = ceil(cellfun(@(v) v(end), X(ix)));
+                Ys(m) = ceil(cellfun(@(v) v(end), Y(ix)));
                 Frm(m) = n;
                 TRinf(m,:) = trInf(ix,:);     
                 B(m) = b;
@@ -461,6 +461,28 @@ cd('E:\MATLAB\TIRFcalibration\data\Ata01_5_125X100Y50x50_realtime')
     end
 
     function dispTraceInt
+        figure(901)
+        smix = unique(MIX); % # selected SM
+        if isempty(smix), return; end
+        if smix(1)==0, smix(1)=[]; end % remove zero
+        ns = numel(smix);
+
+        intShft = 10e4;
+        intShft = 0;
+        ixs = [];
+        for i = 1:ns
+            ix = smix(i); % SM index
+            mix = find(MIX==ix);
+            frm = Frm(mix);
+            FRM(i)=numel(frm);
+            %if numel(frm)<217,continue; end
+            ixs = [ixs ix];
+            int = INT(mix);
+            INTsave(:,i) = int;
+            plot(frm,int+intShft*(i-1));
+        end
+        save('SNRintTraces','INTsave','frm','ixs')
+        savefig('SNRintTraces');        
         
     end
 

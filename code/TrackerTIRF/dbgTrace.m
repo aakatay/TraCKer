@@ -1,29 +1,45 @@
 % display traces with TrackerTIRF
 clear all;
 close all;
-
+isConverted =1;
+    % (1) rtTraCKerTrace.m
+    if isConverted % use converted data
+        load('traceDataRT.mat')
+    else
+        load('traceData_shft3.5_0017.mat') 
+    end
+    TraceXrt = TraceX; TraceYrt = TraceY; trInfRT = trInf;
+    
+    % (2) TrackerTIRF.m (from C:\MATLAB\TraCKer\code\TrackerTIRF)
+    load traceDbg0; % trInf [traceData0*.mat]
+    load traceDbg; % TraceX2 TraceY2 (traceJmplessData*.mat)
 
 
 
 tx = 1; % trace indices
 N = 100;
 for i = 1 : N 
-    tx = i;
-    % (2) TrackerTIRF.m
-    load traceDbg0; % trInf [traceData0*.mat]
-    trInf2 = trInf; clear trInf;
-    load traceDbg; % TraceX2 TraceY2 (traceJmplessData*.mat)
+    tx = i; % trace index
 
-    ix1 = trInf2(tx,3);
-    ix2 = trInf2(tx,2)+ix1-1;
+    % (1) rtTraCKerTrace.m
+    if isConverted
+        ix1 = trInfRT(tx,3);
+        ix2 = trInfRT(tx,2)+ix1-1;
+
+        x = TraceXrt(ix1:ix2)';
+        y = TraceYrt(ix1:ix2)';
+    else
+        x = TraceXrt{tx}';
+        y = TraceYrt{tx}';
+    end
+
+    % (2) TrackerTIRF.m
+    ix1 = trInf(tx,3);
+    ix2 = trInf(tx,2)+ix1-1;
 
     x2 = TraceX2(ix1:ix2)';
     y2 = TraceY2(ix1:ix2)';
-
-    % (1) rtTraCKerTrace.m
-    load('traceData_shft3.5_0017.mat') 
-    x = TraceX{tx}';
-    y = TraceY{tx}';
+        
 
     n2 = numel(x2);
     n1 = numel(x);
@@ -35,6 +51,7 @@ for i = 1 : N
         a(1:n2,3)=y2;
         a(1:n1,4)=y
         cccc= 3;
+        pause
     else
         [x2 x y2 y]
     end

@@ -264,6 +264,7 @@
     
     coeffMat = 'CoeffFit.mat';
     Coeff = 0;
+    CoeffFit = 0;
     
     coeffFound = 0;
     if exist(coeffMat)

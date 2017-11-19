@@ -118,7 +118,7 @@
             Frames = numel(infFN);
         end
         clear infFN;
-            lastFrm = Frames;
+            lastFrm = Frames;open
         
         Frames = floor(Frames);
     end
@@ -143,6 +143,7 @@
     
     coeffMat = 'CoeffFit.mat';
     Coeff = 0;
+    CoeffFit = 0;
     
     coeffFound = 0;
     if exist(coeffMat)
@@ -441,6 +442,8 @@
                     else
                         set(hCoeff,'Value',CoeffSlider+CoeffSliderChange); 
                         Coeff = CoeffSlider*filtMax;
+                        filtMax
+                        CoeffSlider
                     end
                 end       
                 if isNewTileImage
