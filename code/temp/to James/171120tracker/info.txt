@@ -1,0 +1,18 @@
+TrackerTrace: main code
+
+TraCKerTIRFdisp: to display
+
+fname.mat : keeps the movie name
+
+xyzDataGaus-coeff4070_002.mat : detections 
+
+     X & Y : detection coordinates
+
+     frmNoSpot: time (frames) of detections
+
+     ixSptFrm: indices to X,Y,frmNoSpot arrays, 
+
+         + for each frame keeps the lowest index detection in that frame
+
+
+         + ixSptFrm(end) = number of detections + 1
