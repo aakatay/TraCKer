@@ -507,19 +507,19 @@ F = findall(0,'type','figure'); delete(F);
         CM = gray(256);
         for i = 1:n-2
             xys = XYS(ixFrm(i):ixFrm(i+1)-1,:);
-            if size(xys,1)<3, continue; end
-            snrDisp = xys(:,3);
-            if max(snrDisp)<1.5
+            snr = xys(:,3);
+            if max(snr)<1.5
                 sscale = 1.5;
                 EdgeColorSel = 1; % red
-            elseif max(snrDisp)<5
+            elseif max(snr)<5
                 sscale = 5;
                 EdgeColorSel = 2; % green 
-            else % max(snrDisp)<10
+            else % max(snr)<10
                 sscale = 10;
                 EdgeColorSel = 3; % blue
             end
-            SNRmovVoronoi = getVoronoinImg(xys(:,1:2),snrDisp/sscale,szXY,mag,CM,EdgeColorSel);
+            if size(xys,1)<3, continue; end
+            SNRmovVoronoi = getVoronoinImg(xys(:,1:2),snr/sscale,szXY,mag,CM,EdgeColorSel);
             imwrite(SNRmovVoronoi,SNRmovieVoronoiFN,'WriteMode','append','Compression', 'none') 
         end
     end

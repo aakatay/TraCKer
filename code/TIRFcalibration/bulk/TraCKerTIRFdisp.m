@@ -1,6 +1,6 @@
 % write images of acquision overlayed with trace & detection points
 % RUN in
-% (1) post process data : _00*-coeff**** folder 
+% (1) bulk data : _00*-coeff**** folder 
 % (2) realtime data     : main folder 
 %    + after converting trace data by dbgTraces_convertRT.m
 

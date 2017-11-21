@@ -3,7 +3,7 @@ close all;
 
 
 % 1: in RT folder run  isOverlay = 0; isRT = 1;
-% 2: in postprocess folder run  isOverlay = 0; isRT = 0;
+% 2: in bulk process folder run  isOverlay = 0; isRT = 0;
 % 3: copy outputs to the same folder run isOverlay = 1
 
 isOverlay = 0;

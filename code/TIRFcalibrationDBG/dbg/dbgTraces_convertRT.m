@@ -1,4 +1,4 @@
-% converts realtime data to post process data 
+% converts realtime data to bulk process data 
 % + for TraCKerTIRFdisp.m
 clear all;
 close all;
