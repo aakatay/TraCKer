@@ -6,28 +6,17 @@ cd('E:\MATLAB\TIRFcalibration\data\Ata01_5_125X100Y50x50_realtime')
     cd waSeq\tracker\
     cfg_ = load('..\..\cfgRT');
     cfg = cfg_.cfg;
-    
-    sptJmpForTracing = cfg.sptJmpForTracing;
-    dn = cfg.sptReAppearTime;
     ndigit = cfg.ndigit; % # of digits for sequence number
     label = cfg.label; % # of digits for sequence number
-    w = cfg.w;
-    h = cfg.h;
-    szXY = [w h];
-    szYX = fliplr(szXY);
-    %wsz = cfg.wszTracker; % window size for SM crop
-    wsz = 5; % window size for SM crop
-    w = floor(wsz/2);
     
-    % prime numbers
-    if dn>2, error('update the code (sptReAppearTime)'); end
-    pNlim = [200000 400000 600000];
-    genPrimeNumSet; % pNlim --> pns : (3,10000)
-        
     outDIR = 'rtData\';
     if exist(outDIR), rmdir(outDIR,'s'); end
     mkdir(outDIR)
     
+    dn = cfg.sptReAppearTime;
+    
+    if dn>2, error('update the code (sptReAppearTime)'); end
+    sptJmpForTracing = cfg.sptJmpForTracing;
     
     %%
     digitFormat = sprintf('''%%0%1ii''',ndigit);
@@ -51,7 +40,6 @@ cd('E:\MATLAB\TIRFcalibration\data\Ata01_5_125X100Y50x50_realtime')
     X=[];Y=[];INT=[];
     TraceX={};TraceY={};
     trInf = [];
-    pnIMG = nan([szYX dn+1]);
     while (1)
         %% output filename
         digitTXT = eval(['sprintf(' digitFormat ',n)'] );
@@ -68,81 +56,21 @@ cd('E:\MATLAB\TIRFcalibration\data\Ata01_5_125X100Y50x50_realtime')
             end 
         end
         posfn = posFN.name;
-        
-
-               
+        % scatter(XC,YC,'.')
         
         posfn_=load(posfn);
         XC = posfn_.X;
         YC = posfn_.Y;
         INTC = posfn_.INT;
+        X = [X XC];
+        Y = [Y YC];
         INT = [INT INTC];
-        npos = numel(x); % # of localizations
-        
-        snc = rem(n,3); % prime number set number (current)
-        snp = rem(n-1,3); % prime number set number (previous)
-        sng = rem(n-2,3); % prime number set number (gap: 2frm before)
-        ixtc = zeros(1,npos);
-        
-        genPrimeNumImg(sn)
-        pnIMG(:,:,1) = pnImg;
-        pnIMGr = pnImg; % remaining localizations
-        
         
         nSPOTs(n) = length(XC); % number of spots in that frame
         %ixSpt = ixSptFrm(n):ixSptFrm(n)+nSPOTs(n)-1; % indices of the spots in the current frame
         %frmNoSpot(ixSpt) = n;
         ixSptFrm(n+1) = ixSptFrm(n)+nSPOTs(n); % first spot in the frame
-        if n == 1
-            n = 2; 
-            XP = XC; YP = YC;
-            ixtp = ixtc;
-            continue; 
-        end
-        
-        %% 1: check prev frame
-        pnMATCH = pnIMG(:,:,1).*pnIMG(:,:,2); 
-        pnMatch = unique(pnMATCH);        
-        nt = numel(pnMatch);
-        
-        for i = 1:nt
-            fct = factor(pnMatch(i));
-            if numel(fct) >2, continue; % overlapping traces
-            elseif numel(fct) == 1, continue; % no matching with prev frame
-            else % match found : (numel(fct)=2)
-                ixc = find(fct(1) == pns(snc,:)); % index to XC YC arrays
-                ixp = find(fct(2) == pns(snp,:)); % index to XP YP arrays
-                pnIMGr(YC(ixc)-w:YC(ixc)+w,XC(ixc)-w:XC(ixc)+w+2) = nan; % remove the current localization
-                ixtc(ixc) = 1; % add to the trace boolean
-                
-                if ismember(ixp,ixtp) % add to the trace
-                    
-                else % new trace
-                    [XP(ixp) XC(ixc)];
-                    [YP(ixp) YC(ixc)];
-                    ixtp(ixp) = 1; % add to the trace boolean
-
-                end
-
-            end
-            
-            
-        end
-        
-        %% 2: check 2frm before (with a gap)
-        pnMATCH = pnIMGr.*pnIMG(:,:,3); 
-        pnMatch = unique(pnMATCH);        
-        nt = numel(pnMatch);
-
-        for i = 1:nt
-            if ismember(ixp,ixtg) % add to the trace with a gap
-            else % new trace
-            end
-        end
-        
-        XP = XC; YP = YC; XG = XP; YG = YP; ixtp = ixtc; ixtg = ixtp;
-    end
-        
+        if n == 1, n = 2; continue; end
 
         %% FIND OUT THE TRACES
         %%initialize
@@ -282,24 +210,5 @@ cd('E:\MATLAB\TIRFcalibration\data\Ata01_5_125X100Y50x50_realtime')
         
     end % while loop
     
-    
-    function genPrimeNumImg(sn)
-        %sn: set number
-        % max 1e4 localizations in a frame
-        smMap = zeros(szYX);
-        smMap(sub2ind(szYX,YC,XC)) = pns(sn,1:npos);
-        pnImg = conv2(smMap,ones(wsz),'same');
-    end
-    
-    function genPrimeNumSet
-        pn_1 = primes(pNlim(1));
-        npn_1 = numel(pn_1);
-        pns(1,:) = pn_1(1:1e4);
-        pn_2 = primes(pNlim(2));
-        npn_2 = numel(pn_2);
-        pns(2,:) = pn_2(npn_1+1:npn_1+1e4);
-        pn_3 = primes(pNlim(3));
-        pns(3,:) = pn_3(npn_2+1:npn_2+1e4);
-    end
     
 end

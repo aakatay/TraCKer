@@ -115,7 +115,9 @@ F = findall(0,'type','figure'); delete(F);
         while (1) % wait for update
             traceSeq = [traceFN label '_' num2str(n,digitFormat) '.mat'];
             if ~exist(traceSeq)
-                runAnalysisWin
+                writeSNRvoronoiMov
+                playSNRvoronoiMov
+                %runAnalysisWin
                 return
                 [fdbck] = funcFeedback(cfg.msgTXT,fdbck,fcall);
                 if fdbck.inStop, break;  end % STOP
@@ -524,10 +526,19 @@ F = findall(0,'type','figure'); delete(F);
         end
     end
 
+    function playSNRvoronoiMov
+        fnMov = dir([SNRmovieConvFN(1:end-4) '*.tif']);
+        if ~isempty(fnMov)
+            
+        end
+        
+    end
+
     function writeSNRmov
         if ~dbgSNRimg, return; end
         %% SNR movie
         if ~isempty(find(SNRimg*SNRmul>=2^16)), warning('SNR image saturated use lower a SNRmul');end
+        SNRmovieConvFN2 = [ SNRmovieConvFN(1:end-4) sprintf('frm%04i-%04i.tif',) ]
         SNRmov = SNRimg*SNRmul;
         stackWrite(SNRmov,SNRmovieFN);
         cvWin = ones(5);

@@ -26,7 +26,8 @@ function runRTanalysis
     cfg.sptReAppearTime = 2; % [frames]
     cfg.sptJmpForTracing = 1; % [px]
     cfg.stdWin = 10; % number of frames to calc. std
-    cfg.wsz = 6; % window size
+    cfg.wsz = 5; % window size
+    cfg.wszTracker = 5; % window size
     cfg.inSaveCountingMAX = numFrm2Save; % # frames to save
     cfg.cropTXT = [];
     cfg.cropTXT = '125X100Y50x50';
@@ -41,7 +42,7 @@ function runRTanalysis
     
     %% messaging TXT file
     msgTXT = cfg.msgTXT; 
-    if exist(msgTXT), delete(msgTXT); end;
+    if exist(msgTXT), delete(msgTXT); end
     
 
     %% buttons

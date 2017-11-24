@@ -136,6 +136,10 @@ function IMG = getVoronoinImg(x,cellColor,szXY,mag,CM,EdgeColorSel)
     figImg = figure('DoubleBuffer','on','Menubar','none','Name',tit,'NumberTitle','off','Colormap',CM,'Position',[pos2/2 m n]);
     axeImg = axes('Parent',figImg,'DataAspectRatio',[1 1 1],'Position',[0 0 1 1],'Visible','off','XLim',0.5+[0 m],'YLim',0.5+[0 n]);
     
+    xlim3 = [0 1];
+    ylim3 = [0 1];
+    xlim(xlim3)
+    ylim(ylim3)
     [v,c] = voronoin(x3); 
     nc = size(c,1);
     cellColor2 = zeros(nc,1);
@@ -144,7 +148,7 @@ function IMG = getVoronoinImg(x,cellColor,szXY,mag,CM,EdgeColorSel)
         if all(c{i}~=1)   % If at least one of the indices is 1, 
                           % then it is an open region and we can't 
                           % patch that.
-            p = patch(v(c{i},1),v(c{i},2),cellColor2(i),'EdgeColor',EdgeColor(EdgeColorSel,:)); % use color i.
+            p = patch(v(c{i},1),v(c{i},2),[1 1 1]*cellColor2(i),'EdgeColor',EdgeColor(EdgeColorSel,:)); % use color i.
             cccc = 33;
         end
     end
@@ -155,10 +159,6 @@ function IMG = getVoronoinImg(x,cellColor,szXY,mag,CM,EdgeColorSel)
     
     %% 
     figure(figImg);
-    xlim3 = [0 1];
-    ylim3 = [0 1];
-    xlim(xlim3)
-    ylim(ylim3)
     IMG = getframe(gcf);
     imgFig = getframe(gcf); 
     IMG = imgFig.cdata;
