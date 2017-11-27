@@ -23,14 +23,13 @@ F = findall(0,'type','figure'); delete(F);
     w = cfg.w;
     h = cfg.h;
     wsz = cfg.wsz; % window size for SM crop
-wsz = 5; % window size for SM crop
     szXY = [w h];
     szYX = fliplr(szXY);
     acqTime = cfg.acqTime; % [s]
     stdWin = cfg.stdWin; % number of frames to calc. std
 
     digitFormat = sprintf('%%0%1ii',ndigit);
-    s = floor(wsz/2); 
+    s = wsz/2; 
     mag = 4; % display size
     [mag, pos, szx, szy ] = calcMaxMag(zeros(szXY),mag);
     szXYmag = [szx, szy];
@@ -108,13 +107,14 @@ wsz = 5; % window size for SM crop
     f = 1; % a index
     aIX = cell(nt0,1);
     fIX = cell(nt0,1);
-    mlast = 0; % SM index for SNR
+    m = 0; mlast = 0; % SM index for SNR
     ixFrm = 0; % frst frame (0 traces)
-    XYS = [];
+    Xs = []; Ys = []; Frm = []; TRinf = []; B = []; INT = []; SNR = []; MIX = []; XYS = [];
     while (1)        
+        n = n + 1;
         %% load data
         while (1) % wait for update
-            traceSeq = [traceFN label '_' num2str(n+1,digitFormat) '.mat'];
+            traceSeq = [traceFN label '_' num2str(n,digitFormat) '.mat'];
             if ~exist(traceSeq)
                 writeSNRvoronoiMov
                 playSNRvoronoiMov
@@ -126,7 +126,6 @@ wsz = 5; % window size for SM crop
                 break; % continue
             end 
         end      
-        n = n + 1;
         
         fn_ = load(traceSeq); % trace MAT
         TraceX = fn_.TraceX;
@@ -181,30 +180,32 @@ wsz = 5; % window size for SM crop
         % construct crop image stack
         for j = 1:numel(ixSM) % each single molecule in that frame
             ixsm = ixSM(j); % single molecule index
-            y_ = y(ixs(j));
-            x_ = x(ixs(j));
-            %if ((x_<xc1) || (y_<yc1) || (x_>xc2) || (y_>yc2)), tt = tt + 1;continue; end
-            if ((x_<=s) || (y_<=s) || (x_+s-1>szXY(1)) || (y_+s-1>szXY(2))), continue; end % at the edge
+            y_ = y(j);
+            x_ = x(j);
+            if ((x_<xc1) || (y_<yc1) || (x_>xc2) || (y_>yc2))
+                tt = tt + 1;
+                %continue; 
+            end
+            if ((x_<=s) || (y_<=s) || (x_+s-1>szXY(1)) || (y_+s-1>szXY(2))), continue; end
             if n == 2 % add the first frame data
-                a(:,:,f) = Afrst(y_-s:y_+s,x_-s:x_+s); % crop
+                a(:,:,f) = Afrst(y_-s:y_+s-1,x_-s:x_+s-1); % crop
                 aIX{ixsm} = [aIX{ixsm} f]; % index for the frame of the single molecule
                 fIX{ixsm} = [fIX{ixsm} 1]; % frames
                 f=f+1;
             end
-            a(:,:,f) = A(y_-s:y_+s,x_-s:x_+s); % crop
+            a(:,:,f) = A(y_-s:y_+s-1,x_-s:x_+s-1); % crop
             aIX{ixsm} = [aIX{ixsm} f]; % index for the frame of the single molecule
             fIX{ixsm} = [fIX{ixsm} n]; % frames
             f=f+1;
         end
         
         %% calculate SNR
-        m = 0;
-        Xs = []; Ys = []; Frm = []; TRinf = []; B = []; INT = []; SNR = []; MIX = [];
         if n >= stdWin 
             aIXix_ = find(~cellfun(@isempty,aIX)); % all SM found so far
             aIXix = aIXix_;
             aIXix( (   (n-frm1(aIXix)+1)<stdWin   )) = []; % remove SM shorter than stdWin
             aIXix( (   frm2(aIXix) < n  )) = []; % remove SM bleach before the current frame (n)
+            mlast = m;
             if dbgSNRimg, snrImg = zeros(szXYmag); end
             num_ixImg2(n) = 0;
             for j = 1:numel(aIXix) % for each SM 
@@ -244,7 +245,6 @@ wsz = 5; % window size for SM crop
                 SNR(m) = snr;                   
                 MIX(m) = ix; % SM index
                 
-                
                 if dbgSNRimg
                     Xmag = round(Xs(m)*mag);
                     Ymag = round(Ys(m)*mag);
@@ -279,10 +279,9 @@ wsz = 5; % window size for SM crop
 
         if ~isempty(Xs)
             XYS = [XYS;Xs' Ys' SNR']; 
+            
         end
-        
-        mlast = mlast+m;
-        ixFrm = [ixFrm mlast]; % indices of spots in each frame
+        ixFrm = [ixFrm mlast+m]; % indices of spots in each frame
 
         continue
          
@@ -320,8 +319,7 @@ wsz = 5; % window size for SM crop
         smMapCv2 = conv2(smMapCv,ones(wsz),'same');
         smMapCv3 = zeros(szYX);
         smMapCv3(smMapCv2 == wsz^2) = 1;
-        %smMapCv4 = circshift(smMapCv3,[1 1]);
-        smMapCv4 = smMapCv3;
+        smMapCv4 = circshift(smMapCv3,[1 1]);
         smMapCv5 = smMapCv4+smMap;
         ixImg = find(smMapCv5==2);
         ixIMG = sub2ind(szYX,y,x)';
@@ -334,7 +332,7 @@ wsz = 5; % window size for SM crop
             figure(345);imagesc(smMapCv)
             figure(346);imagesc(smMapCv2)
             figure(347);imagesc(smMapCv3)
-            %figure(348);imagesc(smMapCv4)
+            figure(348);imagesc(smMapCv4)
             figure(349);imagesc(smMapCv5)
             cc=4;
         end
@@ -509,13 +507,11 @@ wsz = 5; % window size for SM crop
         
         CM = jet(256);
         CM = gray(256);
-        for i = 2:n % frame index
-            xys = XYS(ixFrm(i-1)+1:ixFrm(i),:);
-            if size(xys,1)<5, continue; end
+        for i = 1:n
+            xys = XYS(ixFrm(i)+1:ixFrm(i),:);
+            if size(xys,1)<3, continue; end
             snrDisp = xys(:,3);
-            
-            % SNR intensity range scales
-            if max(snrDisp)<1.5 
+            if max(snrDisp)<1.5
                 sscale = 1.5;
                 EdgeColorSel = 1; % red
             elseif max(snrDisp)<5
@@ -525,7 +521,6 @@ wsz = 5; % window size for SM crop
                 sscale = 10;
                 EdgeColorSel = 3; % blue
             end
-            
             SNRmovVoronoi = getVoronoinImg(xys(:,1:2),snrDisp/sscale,szXY,mag,CM,EdgeColorSel);
             imwrite(SNRmovVoronoi,SNRmovieVoronoiFN,'WriteMode','append','Compression', 'none') 
         end

@@ -123,6 +123,7 @@ function IMG = getVoronoinImg(x,cellColor,szXY,mag,CM,EdgeColorSel)
         unew = dx(ixEdge)+ u.*sx(ixEdge);
         vnew = dy(ixEdge)+ v.*sy(ixEdge);
         xnew = [unew' vnew'];
+        if isempty(xnew), xnew=[];end
         x3 = [x3; xnew];
 
 
@@ -162,6 +163,7 @@ function IMG = getVoronoinImg(x,cellColor,szXY,mag,CM,EdgeColorSel)
     IMG = getframe(gcf);
     imgFig = getframe(gcf); 
     IMG = imgFig.cdata;
+    IMG = flipud(IMG);
     close(figImg);
 
 

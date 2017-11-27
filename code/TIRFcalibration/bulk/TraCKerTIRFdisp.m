@@ -191,7 +191,8 @@
     
     hWB =  waitbar(0,'marking spots...');
     % frame loop : generate TraceImage =======================
-    for ixFrm = frameVec(1:end-1)+1 % all frames % starts with 2nd 
+    %for ixFrm = frameVec(1:end-1)+1 % all frames % starts with 2nd 
+    for ixFrm = frameVec(1:end) % all frames % starts with 2nd 
         if isRT
             frmRead = 1;
             fname = [fname0 num2str(ixFrm,digitFormat) '.tif'];
@@ -270,7 +271,7 @@
         pxX = round((X-0.5)*pxMag+0.5);
         pxY = round((Y-0.5)*pxMag+0.5);
         for i = 1:numel(pxY)
-            if pxY(i)<1 || pxX(i)<1 || pxY(i)> imSzBin(2) || pxX(i) > imSzBin(1), continue; end;
+            if pxY(i)<1 || pxX(i)<1 || pxY(i)> imSzBin(2) || pxX(i) > imSzBin(1), continue; end
             binImg(pxY(i),pxX(i))=1 ...
            +binImg(pxY(i),pxX(i));
         end
@@ -320,7 +321,7 @@
 
         imgOut = [imgOut1 pad imgOut2];
         
-        if ixFrm == frameVec(2)
+        if ixFrm == frameVec(1)
             if exist([imgZFout])
                 delete([imgZFout]);
             end
@@ -330,7 +331,7 @@
         end
         delete(hImg)
         delete(hscat0)
-        if isDispDetect, delete(hscat); end;
+        if isDispDetect, delete(hscat); end
         delete(hscat2)
 
         ixOld = ixCurr;

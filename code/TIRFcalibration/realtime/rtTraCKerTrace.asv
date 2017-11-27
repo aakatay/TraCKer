@@ -72,9 +72,8 @@ cd('E:\MATLAB\TIRFcalibration\data\Ata01_5_125X100Y50x50_realtime')
             nv = 1:n-1;
             plotyy(nv,TLOOP,nv,tsave)
             plot([TLOOP;tsave]')
-            title(sprintf('mean time : %.03f',mean(TLOOP)));
             legend(['loop' ;'save'])
-            return;
+            pause
         end
         posfn = posFN.name;
         
@@ -122,10 +121,9 @@ cd('E:\MATLAB\TIRFcalibration\data\Ata01_5_125X100Y50x50_realtime')
         end
         
         for i = 1:nt % each trace
-            if pnMatch(i) == 0, continue;end % no matching with prev frame
-            %fct = factor(abs(pnMatch(i)));
-            fct = factorFast(abs(pnMatch(i)),pns(snc,:),pns(snp,:));
-            if numel(fct) ~=2, a='disp(fct)';continue; % overlapping traces
+            fct = factor(abs(pnMatch(i)));
+            if numel(fct) >2, a='disp(fct)';continue; % overlapping traces
+            elseif numel(fct) == 1, continue; % no matching with prev frame
             else % match found : (numel(fct)=2)
                 [fixc,fixp] = getFix(n,'c','p');
                 ixc = find(fct(fixc) == pns(snc,:)); % index to XC YC arrays
@@ -177,10 +175,8 @@ cd('E:\MATLAB\TIRFcalibration\data\Ata01_5_125X100Y50x50_realtime')
         pnMatch = unique(pnMATCH(~isnan(pnMATCH)));
         nt = numel(unique(abs(pnMatch)));
         for i = 1:nt % each trace
-            if pnMatch(i) == 0, continue;end % no matching with prev frame
-            %fct = factor(abs(pnMatch(i)));
-            fct = factorFast(abs(pnMatch(i)),pns(snc,:),pns(sng,:));
-            if numel(fct) ~=2, a='disp(fct)';continue; % overlapping traces
+            fct = factor(abs(pnMatch(i)));
+            if numel(fct) >2, a='disp(fct)';continue; % overlapping traces
             elseif numel(fct) == 1, continue; % no matching with prev frame
             else % match found : (numel(fct)=2)
                 [fixc,fixg] = getFix(n,'c','g');
@@ -231,17 +227,6 @@ cd('E:\MATLAB\TIRFcalibration\data\Ata01_5_125X100Y50x50_realtime')
     end
            
     % ====================================================================
-    function fct = factorFast(num,pns1,pns2)
-        fct=[];
-        fctIx1 = find(ismember(num./pns1,pns2));
-        if ~isempty(fctIx1)
-            fct(1) = pns1(fctIx1);
-            fct(2) = num/fct(1);
-            fct = sort(fct);
-            ccc=4;
-        end
-        
-    end
 
     function checkTX(nin)
         return;
