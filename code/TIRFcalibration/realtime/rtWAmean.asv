@@ -49,12 +49,8 @@ function rtWAmean
             dbgWaitAcqTime(clck)
             fnameSeq = [fname0 num2str(n,digitFormat) '.tif'];
             if ~exist(fnameSeq) % wait for update
-                if 0
-                    figure;
-                    tloop = tl(2:end)-tl(1:end-1);
-                    plot([ tloop;twrt ]')
-                    legend('loop' ,'write')
-                end
+                tloop = tl(2:end)-tl(1:end-1);
+                plot([ twrt tloop])
                 if wait == 0, time = toc; fprintf(fid,'wait for   n=%3i time=%6.03f\n',n,time);wait = 1;end
                 [fdbck] = funcFeedback(cfg.msgTXT,fdbck,fcall);
                 if fdbck.inStop, break;  end % STOP
@@ -63,7 +59,7 @@ function rtWAmean
                 clck = clock;
                 break; % continue
             end 
-            %pause(0.1)
+            pause(0.1)
         end
         
         
@@ -74,10 +70,7 @@ function rtWAmean
         %if n == 20, pause(10); end
         
         if n>=waWin
-                t1 = toc;
             A = uint16(mean(Awa,3));
-                t2 = toc;
-                twrt(n) = t2-t1;
             nWA = n - waWin+1;
             fnameWaSeq = [outDIR fname0 'WA_' num2str(nWA,digitFormat) '.tif'];
             ME = 1;
@@ -89,12 +82,13 @@ function rtWAmean
                     disp(sprintf('error in writing, trying again | frame number: %i',i)); %#ok<DSPS>
                 end
                 t2 = toc;
+                twrt(n) = t2-t1;
                 
-                %pause(acqTime/10)
+                pause(acqTime/10)
             end
         end
         n = n + 1; % # of frames
-        %pause(acqTime/3)
+        pause(acqTime/3)
         
         inWait = 0;
     end
@@ -102,7 +96,6 @@ function rtWAmean
     
     function dbgWaitAcqTime(clck)
         %pauses for acqTime
-        %return
         sec0 = clck(5)*60+clck(6);
         while (1)
             clck = clock;

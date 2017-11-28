@@ -1,8 +1,8 @@
-function IMG = getVoronoinImg(x,cellColor,szXY,mag,CM,EdgeColorSel)
+function [IMG,tPatch] = getVoronoinImg(figSNRvoronIMG,x,cellColor,szXY,mag,CM,EdgeColorSel)
 % displays scattering centers in voronoi cells
 % test : getVoronoinImg(gallery('uniformdata',[10 2],5)*50,[50 50],8)
-
-
+tPatch = [];
+    isSymmetricCorrection = 1;
     isDisp = 0; 
     EdgeColor = [1 0 0; 0 1 0; 0 0 1]; % red green blue
     
@@ -39,6 +39,7 @@ function IMG = getVoronoinImg(x,cellColor,szXY,mag,CM,EdgeColorSel)
         hold off
     end
 
+    if isSymmetricCorrection
     %% find empty quarter
         qix = (x(ix,1)>0.5)*10 +  (x(ix,2)>0.5)*100; % quarter index
         % 0: bottom left
@@ -125,17 +126,20 @@ function IMG = getVoronoinImg(x,cellColor,szXY,mag,CM,EdgeColorSel)
         xnew = [unew' vnew'];
         if isempty(xnew), xnew=[];end
         x3 = [x3; xnew];
+    else
+        x3 = x;
+    end
 
 
 
-
+%    t1 = toc;
     %% second call
     m = szXY(1)*mag;
     n = szXY(2)*mag;
     tit = 'getVoronoinImg';
     pos2 = [300 300];
-    figImg = figure('DoubleBuffer','on','Menubar','none','Name',tit,'NumberTitle','off','Colormap',CM,'Position',[pos2/2 m n]);
-    axeImg = axes('Parent',figImg,'DataAspectRatio',[1 1 1],'Position',[0 0 1 1],'Visible','off','XLim',0.5+[0 m],'YLim',0.5+[0 n]);
+    %figImg = figure('DoubleBuffer','on','Menubar','none','Name',tit,'NumberTitle','off','Colormap',CM,'Position',[pos2/2 m n]);
+    %axeImg = axes('Parent',figImg,'DataAspectRatio',[1 1 1],'Position',[0 0 1 1],'Visible','off','XLim',0.5+[0 m],'YLim',0.5+[0 n]);
     
     xlim3 = [0 1];
     ylim3 = [0 1];
@@ -150,6 +154,7 @@ function IMG = getVoronoinImg(x,cellColor,szXY,mag,CM,EdgeColorSel)
                           % then it is an open region and we can't 
                           % patch that.
             p = patch(v(c{i},1),v(c{i},2),[1 1 1]*cellColor2(i),'EdgeColor',EdgeColor(EdgeColorSel,:)); % use color i.
+            %p = patch(v(c{i},1),v(c{i},2),[1 1 1]*cellColor2(i)); % use color i.
             cccc = 33;
         end
     end
@@ -159,12 +164,13 @@ function IMG = getVoronoinImg(x,cellColor,szXY,mag,CM,EdgeColorSel)
     hold off
     
     %% 
-    figure(figImg);
-    IMG = getframe(gcf);
+    figure(figSNRvoronIMG);
     imgFig = getframe(gcf); 
     IMG = imgFig.cdata;
     IMG = flipud(IMG);
-    close(figImg);
+    %close(figImg);
+%    t2 = toc;
+%    tPatch = t2-t1;
 
 
     %% show extra generated centers

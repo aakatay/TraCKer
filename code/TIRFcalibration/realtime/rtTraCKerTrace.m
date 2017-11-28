@@ -15,9 +15,13 @@ cd('E:\MATLAB\TIRFcalibration\data\Ata01_5_125X100Y50x50_realtime')
     h = cfg.h;
     szXY = [w h];
     szYX = fliplr(szXY);
-    %wsz = cfg.wszTracker; % window size for SM crop
-    wsz = 5; % window size for SM crop
+        wsz = cfg.wszTracker; % window size for SM crop
+    %wsz = 5; % window size for SM crop
     w = floor(wsz/2);
+    
+    
+    tic; logFN = cfg.logTrace; fid = fopen(logFN,'w'); wait = 0;
+    clck = clock; fprintf(fid,'start time m= %2i secs=%6.03f\n',clck(5),clck(6));
     
     % prime numbers
     if dn>2, error('update the code (sptReAppearTime)'); end
@@ -52,8 +56,8 @@ cd('E:\MATLAB\TIRFcalibration\data\Ata01_5_125X100Y50x50_realtime')
     TraceX={};TraceY={};
     trInf = [];
     pnIMG = nan([szYX dn+1]);
-    tic
     while (1)
+        time = toc; fprintf(fid,'while loop n=%3i time=%6.03f\n',n,time);
         %% output filename
         digitTXT = eval(['sprintf(' digitFormat ',n)'] );
         traceDataFileNm = [outDIR 'traceData_' label '_' digitTXT '.mat'];
@@ -63,18 +67,22 @@ cd('E:\MATLAB\TIRFcalibration\data\Ata01_5_125X100Y50x50_realtime')
             tloop(n)=toc;
             posFN = rdir(['posData-coeff*_' label '_' digitTXT '.mat']);
             if isempty(posFN)
+                if wait == 0, time = toc; fprintf(fid,'wait for   n=%3i time=%6.03f\n',n,time); wait = 1; end
                 [fdbck] = funcFeedback(cfg.msgTXT,fdbck,fcall);
                 if fdbck.inStop, break;  end % STOP
             else
+                time = toc; wait = 0; fprintf(fid,'updated    n=%3i time=%6.03f\n',n,time);
                 break; % continue
             end 
-            TLOOP = tloop(2:end)-tloop(1:end-1);
-            nv = 1:n-1;
-            plotyy(nv,TLOOP,nv,tsave)
-            plot([TLOOP;tsave]')
-            title(sprintf('mean time : %.03f',mean(TLOOP)));
-            legend(['loop' ;'save'])
-            return;
+            if 0 
+                TLOOP = tloop(2:end)-tloop(1:end-1);
+                nv = 1:n-1;
+                plotyy(nv,TLOOP,nv,tsave)
+                plot([TLOOP;tsave]')
+                title(sprintf('mean time : %.03f',mean(TLOOP)));
+                legend(['loop' ;'save'])
+            end
+            pause(0.010)
         end
         posfn = posFN.name;
         

@@ -24,6 +24,9 @@ cd('E:\MATLAB\TIRFcalibration\data\Ata01_5_125X100Y50x50_realtime')
     h = cfg.h;
     bc = cfg.bc; % [nM] background concentration
     
+    tic; logFN = cfg.logThresh; fid = fopen(logFN,'w'); wait = 0;
+    clck = clock; fprintf(fid,'start time m= %2i secs=%6.03f\n',clck(5),clck(6));
+    
 
     digitFormat = sprintf('%%0%1ii',ndigit);
     outDIR = 'tracker\';
@@ -59,13 +62,17 @@ cd('E:\MATLAB\TIRFcalibration\data\Ata01_5_125X100Y50x50_realtime')
 
     n = 1;
     while (1)
+        time = toc; fprintf(fid,'while loop n=%3i time=%6.03f\n',n,time);
 
         while (1) % wait for update
             fnameSeq = [fname0 'WA_' num2str(n,digitFormat) '.tif'];
             if ~exist(fnameSeq) % wait for update
+                if wait == 0, time = toc; fprintf(fid,'wait for   n=%3i time=%6.03f\n',n,time); wait = 1; end
+                %return;
                 [fdbck] = funcFeedback(cfg.msgTXT,fdbck,fcall);
                 if fdbck.inStop, break;  end % STOP
             else
+                time = toc; wait = 0; fprintf(fid,'updated    n=%3i time=%6.03f\n',n,time);
                 break; % continue
             end 
         end

@@ -1,12 +1,13 @@
 % reads the 'filename_001.tif' and data from tracking of 'filename_002.tif' 
 % processes 'filename_001.tif'
 function rtTrackSNR
-
+pause(2)
 cd('E:\MATLAB\TIRFcalibration\data\Ata01_5_125X100Y50x50_realtime')    
-F = findall(0,'type','figure'); delete(F);
-    
     cd waSeq\tracker\rtData
+
+test=[]; save test test
     dbgSel = 0;
+    dbgSNRvoronIMG = 0;
     dbgSNRimg = 0; % SNR movie
     dbgSNR = 0; % intensity traces
     SNRmul = 1000; % for intesity scale 'SNRimg.tif'
@@ -18,20 +19,22 @@ F = findall(0,'type','figure'); delete(F);
     c_=load(cfg);
     cfg = c_.cfg;
     
+    tic; logFN = cfg.logSNR; fid = fopen(logFN,'w'); wait = 0;
+    clck = clock; fprintf(fid,'start time m= %2i secs=%6.03f\n',clck(5),clck(6));
+    
     ndigit = cfg.ndigit; % # of digits for sequence number
     label = cfg.label;
     w = cfg.w;
     h = cfg.h;
     wsz = cfg.wsz; % window size for SM crop
-wsz = 5; % window size for SM crop
     szXY = [w h];
     szYX = fliplr(szXY);
     acqTime = cfg.acqTime; % [s]
     stdWin = cfg.stdWin; % number of frames to calc. std
+    mag = cfg.dispMag; % display size
 
     digitFormat = sprintf('%%0%1ii',ndigit);
     s = floor(wsz/2); 
-    mag = 4; % display size
     [mag, pos, szx, szy ] = calcMaxMag(zeros(szXY),mag);
     szXYmag = [szx, szy];
     szYXmag = fliplr(szXYmag);
@@ -50,9 +53,17 @@ wsz = 5; % window size for SM crop
     SNRplotFN = 'SNRplot.tif';
     numSMplotFN = 'SNRnumSMplot.tif';
     snrSTDplotFN = 'SNRstdplot.tif';
-    SMdataFN = 'SMdata.mat';
+    SNRdataFN = 'SNRdata.mat';
     
     %% SNR image figure
+    if dbgSNRvoronIMG
+        tit = 'SNR voronoi image';
+        pos(1) = pos(1) - 800;
+        pos(1) = pos(1)- 700;        
+        figSNRvoronIMG = figure('DoubleBuffer','on','Menubar','none','Name',tit,'NumberTitle','off','Colormap',gray(256),'Position',[pos/2 szXYmag(1) szXYmag(2)]);
+        axeSNRvoron = axes('Parent',figSNRvoronIMG,'DataAspectRatio',[1 1 1],'Position',[0 0 1 1],'Visible','off','Nextplot','replacechildren','XLim',0.5+[0 szXYmag(1)],'YLim',0.5+[0 szXYmag(2)]);
+    end
+    
     if dbgSNRimg
         tit = 'SNR image';
         pos(1) = pos(1) - 800;
@@ -112,19 +123,31 @@ wsz = 5; % window size for SM crop
     ixFrm = 0; % frst frame (0 traces)
     XYS = [];
     while (1)        
+        time = toc; fprintf(fid,'while loop n=%3i time=%6.03f\n',n,time);
+        timeLoop(n) = toc;
         %% load data
         while (1) % wait for update
             traceSeq = [traceFN label '_' num2str(n+1,digitFormat) '.mat'];
             if ~exist(traceSeq)
-                writeSNRvoronoiMov
-                playSNRvoronoiMov
+                if wait == 0, time = toc; fprintf(fid,'wait for   n=%3i time=%6.03f\n',n,time); wait = 1; end
+                %writeSNRvoronoiMov
+                %playSNRvoronoiMov
                 %runAnalysisWin
-                return
+                if 0
+                    figure;
+                    timeLoop = timeLoop(2:end)-timeLoop(1:end-1);
+                    tSM = tSM(2:end);
+                    plot([timeLoop;tSM]');
+                    title(sprintf('mean time : %.03f',mean(timeLoop(9:end))));
+                    legend('loop' ,'SM')
+                end
                 [fdbck] = funcFeedback(cfg.msgTXT,fdbck,fcall);
                 if fdbck.inStop, break;  end % STOP
             else
+                time = toc; wait = 0; fprintf(fid,'updated    n=%3i time=%6.03f\n',n,time);
                 break; % continue
             end 
+            pause(0.010)
         end      
         n = n + 1;
         
@@ -171,7 +194,10 @@ wsz = 5; % window size for SM crop
         y = ceil(cellfun(@(v) v(end), Y(IX)));    
         
         %% select isolated SM
+        t1 = toc;
         findSMisolated; % (x,y) -> ixs
+        t2 = toc;
+        tSM(n) = t2-t1;
         ixSM = IX(ixs);
         if isempty(ixSM), continue; end
 
@@ -264,7 +290,7 @@ wsz = 5; % window size for SM crop
                 runIntensityTracesRT
             end
             %% save
-            save(SMdataFN,'Xs','Ys','Frm','TRinf','B','INT','SNR','MIX','aIX','fIX');
+            %save(SMdataFN,'Xs','Ys','Frm','TRinf','B','INT','SNR','MIX','aIX','fIX');
         end
         
         if dbgSNRimg
@@ -283,6 +309,19 @@ wsz = 5; % window size for SM crop
         
         mlast = mlast+m;
         ixFrm = [ixFrm mlast]; % indices of spots in each frame
+        
+        
+        if dbgSNRvoronIMG
+            t1 = toc;
+            SNRmovVoronoi = writeSNRvoronoiFrame(n);
+            t2 = toc;
+            %figure(figSNRvoronIMG)
+            %imagesc(SNRmovVoronoi);
+            tVoron(n) = t2-t1;
+            %pause
+        end
+        
+        save(SNRdataFN,'ixFrm','XYS')
 
         continue
          
@@ -510,10 +549,20 @@ wsz = 5; % window size for SM crop
         CM = jet(256);
         CM = gray(256);
         for i = 2:n % frame index
-            xys = XYS(ixFrm(i-1)+1:ixFrm(i),:);
-            if size(xys,1)<5, continue; end
+            writeSNRvoronoiFrame(i);
+        end
+    end
+
+
+    function SNRmovVoronoi = writeSNRvoronoiFrame(i)
+        CM = gray(256);
+        xys = XYS(ixFrm(i-1)+1:ixFrm(i),:);
+        if size(xys,1)<5 % write a blank image
+            SNRmovVoronoi = zeros(szXY*mag);
+            %imwrite(SNRmovVoronoi,SNRmovieVoronoiFN,'WriteMode','append','Compression', 'none') 
+        else
             snrDisp = xys(:,3);
-            
+
             % SNR intensity range scales
             if max(snrDisp)<1.5 
                 sscale = 1.5;
@@ -525,9 +574,8 @@ wsz = 5; % window size for SM crop
                 sscale = 10;
                 EdgeColorSel = 3; % blue
             end
-            
-            SNRmovVoronoi = getVoronoinImg(xys(:,1:2),snrDisp/sscale,szXY,mag,CM,EdgeColorSel);
-            imwrite(SNRmovVoronoi,SNRmovieVoronoiFN,'WriteMode','append','Compression', 'none') 
+            [SNRmovVoronoi,tPatch(n)] = getVoronoinImg(figSNRvoronIMG,xys(:,1:2),snrDisp/sscale,szXY,mag,CM,EdgeColorSel);
+            %imwrite(SNRmovVoronoi,SNRmovieVoronoiFN,'WriteMode','append','Compression', 'none') 
         end
     end
 

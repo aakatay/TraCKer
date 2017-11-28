@@ -1,6 +1,5 @@
 function [fdbck] = funcFeedback(msgTXT,fdbck,fcall)
 % feedback towards the host function
-    return;
     inWait = fdbck.inWait;
     inWaitCounting = fdbck.inWaitCounting;
     inPause = fdbck.inPause;

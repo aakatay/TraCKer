@@ -2,7 +2,12 @@
 % + for TraCKerTIRFdisp.m
 clear all;
 close all;
-fnTraceDataOUT = '..\..\..\traceDataRT';
+PWD = pwd;
+    cd('..\..\..\')
+    mkdir('dbgTrace')
+    cd(PWD)
+
+fnTraceDataOUT = '..\..\..\dbgTrace\traceDataRT';
 %% load traces
     FN = dir('traceData_*.mat');
     n=  numel(FN);
@@ -36,4 +41,4 @@ fnTraceDataOUT = '..\..\..\traceDataRT';
     end
     
     save(fnTraceDataOUT,'TraceX','TraceY','trInf');
-    cd('..\..\..\')
+    cd('..\..\..\dbgTrace\')

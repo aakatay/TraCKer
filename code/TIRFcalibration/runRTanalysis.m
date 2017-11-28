@@ -31,8 +31,42 @@ function runRTanalysis
     cfg.inSaveCountingMAX = numFrm2Save; % # frames to save
     cfg.cropTXT = [];
     cfg.cropTXT = '125X100Y50x50';
+    cfg.dispMag = 4;
+    cfg.logWA = [pwd '\logData\logWA.txt'];
+    cfg.logThresh = [pwd '\logData\logThresh.txt'];
+    cfg.logPos = [pwd '\logData\logPos.txt'];
+    cfg.logTrace = [pwd '\logData\logTrace.txt'];
+    cfg.logSNR = [pwd '\logData\logSNR.txt'];
+    
+    %% folder structure
+    mkdir waSeq
+    mkdir waSeq\tracker
+    mkdir waSeq\tracker\rtData
+    while ~exist('waSeq\tracker\rtData')
+        pause(0.1)
+    end
+    
+    %% log
+    fclose('all');
+    if exist('logData')~=7
+        mkdir('logData'); 
+    else
+        rmdir('logData', 's');
+        mkdir('logData'); 
+    end
     
     
+    %% voronoi figure
+    snrFrm = 'snrFrames.mat';
+    if exist(snrFrm), delete(snrFrm); end
+    nlast = 0;
+    snrFrames = [];
+    figSNRvoronIMG = [];
+    CM = gray(256);
+    szXY = [];
+    mag = [];
+    if ~exist('output'), mkdir('output'); end
+    SNRmovieVoronoiFN = 'output\SNRmovieVoronoi.tif'; % output
     
     %% function names
     funName = {'waSeq' 'rtDetectThresh' 'rtTraCKerPos' 'rtTraCKerTrace' 'rtTrackSNR'};
@@ -107,6 +141,7 @@ function runRTanalysis
     label3 = uilabel(fig,'Position',[x2 y1(3) 100 15],'Text','TraCKerPos');
     label4 = uilabel(fig,'Position',[x2 y1(4) 100 15],'Text','TraCKerTrace');
     label5 = uilabel(fig,'Position',[x2 y1(5) 100 15],'Text','trackSNR');
+    runStart
 
     
     
@@ -221,7 +256,7 @@ function runRTanalysis
         end
              
         %% save 'cfgRT.mat'
-        cfg.label = label;  
+        cfg.label = label; 
         iminf = imfinfo(fname0_);
         if isempty(cfg.crop)
             cfg.w = iminf.Width;
@@ -233,25 +268,97 @@ function runRTanalysis
         
         save cfgRT cfg;    
         
+        %% prepare
+        prepFigSNRdata;
+        
         %% verify running codes
-        p = gcp();f1=parfeval(p,@rtWAmean,0);
-        while (1), if exist('waSeq'), break; end;end
+        p = gcp('nocreate');f1=parfeval(p,@rtWAmean,0);
+        p = gcp('nocreate');f2=parfeval(p,@rtDetectThresh,0);
+        p = gcp('nocreate');f3=parfeval(p,@rtTraCKerPos,0);
+        p = gcp('nocreate');f4=parfeval(p,@rtTraCKerTrace,0);
+        p = gcp('nocreate');f5=parfeval(p,@rtTrackSNR,0);
+        while (1), if ~isempty(rdir('waSeq\*.tif')), break; end; pause(0.5);end
         set(lmp1,'Color',[0 1 0]);
-        p = gcp();f2=parfeval(p,@rtDetectThresh,0);
-        while (1), if exist('waSeq\tracker'), break; end; end
+        while (1), if ~isempty(rdir('waSeq\tracker\Coeff*.mat')), break; end; pause(0.5); end
         set(lmp2,'Color',[0 1 0]);
-        p = gcp();f3=parfeval(p,@rtTraCKerPos,0);
-        while (1), if ~isempty(rdir('waSeq\tracker\posData-coeff*.mat')), break; end; end
+        while (1), if ~isempty(rdir('waSeq\tracker\posData-coeff*.mat')), break; end; pause(0.5);end
         set(lmp3,'Color',[0 1 0]);
-        p = gcp();f4=parfeval(p,@rtTraCKerTrace,0);
-        while (1), if ~isempty(rdir('waSeq\tracker\cfgRT')), break; end; end
+        while (1), if ~isempty(rdir('waSeq\tracker\rtData\traceData_*.mat')), break; end; pause(0.5); end
         set(lmp4,'Color',[0 1 0]);
-        p = gcp();f5=parfeval(p,@rtTrackSNR,0);
-        while (1), if ~isempty(rdir('waSeq\tracker\cfgRT\SMdata.mat')), break; end; end
+        while (1), if waitSNRdata, break; end; pause(0.5); end % updates nlast
         set(lmp5,'Color',[0 1 0]);
+        dispSNRvoronoiIMG;
 
         if 0
             deleteALLparallelPools
+        end
+    end
+
+    function prepFigSNRdata
+        w = cfg.w;
+        h = cfg.h;
+        szXY = [w h];
+        mag = cfg.dispMag; % display size
+        
+        %% SNR image figure
+        [mag, pos, szx, szy ] = calcMaxMag(zeros(szXY),mag);
+        szXYmag = [szx, szy];
+        szYXmag = fliplr(szXYmag);
+
+        tit = 'SNR voronoi image';
+        pos(1) = pos(1) - 800;
+        pos(1) = pos(1)- 700;    
+        figSNRvoronIMG = figure('DoubleBuffer','on','Menubar','none','Name',tit,'NumberTitle','off','Colormap',gray(256),'Position',[pos/2 szXYmag(1) szXYmag(2)]);
+        axeSNRvoron = axes('Parent',figSNRvoronIMG,'DataAspectRatio',[1 1 1],'Position',[0 0 1 1],'Visible','off','Nextplot','replacechildren','XLim',0.5+[0 szXYmag(1)],'YLim',0.5+[0 szXYmag(2)]);
+
+    end
+
+
+    function bool = waitSNRdata
+        bool = 0;
+        SNRdataFN = [pwd '\waSeq\tracker\rtData\SNRdata.mat'];
+        SNRdata_ = dir(SNRdataFN);
+        if isempty(SNRdata_), return; end
+        SNRdata=load(SNRdataFN, 'ixFrm');
+        ixFrm = SNRdata.ixFrm;
+        nInput = numel(ixFrm);
+        if nlast == nInput
+            return;
+        else
+            nlast = nInput;
+            snrFrames = [snrFrames nlast];
+            save(snrFrm,'snrFrames');
+            bool = 1; % continue
+        end    
+        
+    end
+
+    function dispSNRvoronoiIMG
+        SNRdataFN = [pwd '\waSeq\tracker\rtData\SNRdata.mat'];
+        SNRdata = load(SNRdataFN);
+        ixFrm = SNRdata.ixFrm;
+        XYS = SNRdata.XYS;
+        n = nlast;
+        xys = XYS(ixFrm(n-1)+1:ixFrm(n),:);
+        if size(xys,1)<5 % write a blank image
+            SNRmovVoronoi = zeros(szXY*mag);
+            %imwrite(SNRmovVoronoi,SNRmovieVoronoiFN,'WriteMode','append','Compression', 'none') 
+        else
+            snrDisp = xys(:,3);
+
+            % SNR intensity range scales
+            if max(snrDisp)<1.5 
+                sscale = 1.5;
+                EdgeColorSel = 1; % red
+            elseif max(snrDisp)<5
+                sscale = 5;
+                EdgeColorSel = 2; % green 
+            else % max(snrDisp)<10
+                sscale = 10;
+                EdgeColorSel = 3; % blue
+            end
+            [SNRmovVoronoi,~] = getVoronoinImg(figSNRvoronIMG,xys(:,1:2),snrDisp/sscale,szXY,mag,CM,EdgeColorSel);
+            imwrite(SNRmovVoronoi,SNRmovieVoronoiFN,'WriteMode','append','Compression', 'none') 
         end
     end
 
