@@ -1,10 +1,10 @@
 function [IMG,tPatch] = getVoronoinImg(figSNRvoronIMG,x,cellColor,szXY,mag,CM,EdgeColorSel)
 % displays scattering centers in voronoi cells
 % test : getVoronoinImg(gallery('uniformdata',[10 2],5)*50,[50 50],8)
-tPatch = [];
+%tPatch = [];
     isSymmetricCorrection = 1;
     isDisp = 0; 
-    EdgeColor = [1 0 0; 0 1 0; 0 0 1]; % red green blue
+    EdgeColor = [1 0 0; 0 1 0; 0 0 1; 1 1 1]; % red green blue
     
     % check and correct direction of input
     if size(x,1)<size(x,2) % rows
@@ -120,10 +120,10 @@ tPatch = [];
         u = xr(ixr,1); % x-coor
         v = xr(ixr,2); % y-coor
 
-        [~,ixEdge] = min( [u (1-u) v (1-v)] );
-        unew = dx(ixEdge)+ u.*sx(ixEdge);
-        vnew = dy(ixEdge)+ v.*sy(ixEdge);
-        xnew = [unew' vnew'];
+        [~,ixEdge] = min( [u (1-u) v (1-v)]' );
+        unew = dx(ixEdge)'+ u.*sx(ixEdge)';
+        vnew = dy(ixEdge)'+ v.*sy(ixEdge)';
+        xnew = [unew vnew];
         if isempty(xnew), xnew=[];end
         x3 = [x3; xnew];
     else
@@ -132,7 +132,7 @@ tPatch = [];
 
 
 
-%    t1 = toc;
+    t1 = toc;
     %% second call
     m = szXY(1)*mag;
     n = szXY(2)*mag;
@@ -169,8 +169,8 @@ tPatch = [];
     IMG = imgFig.cdata;
     IMG = flipud(IMG);
     %close(figImg);
-%    t2 = toc;
-%    tPatch = t2-t1;
+    t2 = toc;
+    tPatch = t2-t1;
 
 
     %% show extra generated centers

@@ -11,10 +11,10 @@ function rtDetectThresh
 % image PEAKs =======
 % histogram peak (image PEAKs)
 
-cd('E:\MATLAB\TIRFcalibration\data\Ata01_5_125X100Y50x50_realtime')    
+%cd('E:\MATLAB\TIRFcalibration\data\Ata01_5_125X100Y50x50_realtime');    
+    cd waSeq
     %test = []; save test test
     
-    cd waSeq
     dbg = 0;
 
     load ..\cfgRT;
@@ -30,8 +30,7 @@ cd('E:\MATLAB\TIRFcalibration\data\Ata01_5_125X100Y50x50_realtime')
 
     digitFormat = sprintf('%%0%1ii',ndigit);
     outDIR = 'tracker\';
-    if exist(outDIR), rmdir(outDIR,'s'); end
-    mkdir(outDIR)
+    
     CoeffFN = [outDIR 'Coeff_' cfg.label '.mat'];
     Coeff = []; save(CoeffFN,'Coeff');
 

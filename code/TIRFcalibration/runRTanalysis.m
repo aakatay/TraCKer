@@ -31,14 +31,19 @@ function runRTanalysis
     cfg.inSaveCountingMAX = numFrm2Save; % # frames to save
     cfg.cropTXT = [];
     cfg.cropTXT = '125X100Y50x50';
+    cfg.cropTXT = '0X0Y512x512';
+    cfg.cropTXT = '0X0Y260x260';
     cfg.dispMag = 4;
     cfg.logWA = [pwd '\logData\logWA.txt'];
     cfg.logThresh = [pwd '\logData\logThresh.txt'];
     cfg.logPos = [pwd '\logData\logPos.txt'];
     cfg.logTrace = [pwd '\logData\logTrace.txt'];
     cfg.logSNR = [pwd '\logData\logSNR.txt'];
+    cfg.SNRcolorThresh = [1.5 7 12];
     
     %% folder structure
+    
+    if exist(cfg.outDIR), rmdir(cfg.outDIR, 's'); end
     mkdir waSeq
     mkdir waSeq\tracker
     mkdir waSeq\tracker\rtData
@@ -218,7 +223,6 @@ function runRTanalysis
 
     function runStart
         %% remove directory
-        if exist(cfg.outDIR), rmdir(cfg.outDIR, 's'); end
         if exist(fname0MAT),delete(fname0MAT); end
         p = gcp();
         
@@ -276,7 +280,7 @@ function runRTanalysis
         p = gcp('nocreate');f2=parfeval(p,@rtDetectThresh,0);
         p = gcp('nocreate');f3=parfeval(p,@rtTraCKerPos,0);
         p = gcp('nocreate');f4=parfeval(p,@rtTraCKerTrace,0);
-        p = gcp('nocreate');f5=parfeval(p,@rtTrackSNR,0);
+        %p = gcp('nocreate');f5=parfevalOnAll(p,@rtTrackSNR,0);
         while (1), if ~isempty(rdir('waSeq\*.tif')), break; end; pause(0.5);end
         set(lmp1,'Color',[0 1 0]);
         while (1), if ~isempty(rdir('waSeq\tracker\Coeff*.mat')), break; end; pause(0.5); end
@@ -285,9 +289,7 @@ function runRTanalysis
         set(lmp3,'Color',[0 1 0]);
         while (1), if ~isempty(rdir('waSeq\tracker\rtData\traceData_*.mat')), break; end; pause(0.5); end
         set(lmp4,'Color',[0 1 0]);
-        while (1), if waitSNRdata, break; end; pause(0.5); end % updates nlast
-        set(lmp5,'Color',[0 1 0]);
-        dispSNRvoronoiIMG;
+        rtTrackSNR
 
         if 0
             deleteALLparallelPools

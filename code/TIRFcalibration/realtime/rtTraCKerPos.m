@@ -2,8 +2,8 @@ function rtTraCKerPos
 % RUN in waSeq\tracker\
 % 'style','text','BackgroundColor',[1 1 1],
     % F = findall(0,'type','figure','tag','TMWWaitbar'); delete(F)
-pause(2)
-cd('E:\MATLAB\TIRFcalibration\data\Ata01_5_125X100Y50x50_realtime')    
+    pause(0.1)
+%cd('E:\MATLAB\TIRFcalibration\data\Ata01_5_125X100Y50x50_realtime');    
     cd waSeq\tracker\
     cfg = '..\..\cfgRT';
     cfg_=load(cfg);
@@ -63,7 +63,8 @@ cd('E:\MATLAB\TIRFcalibration\data\Ata01_5_125X100Y50x50_realtime')
         while (1) % wait for update
             coeffFN = dir('Coeff*.mat');
             if isempty(coeffFN), pause(0.01); continue; end
-            Coeff_=load(coeffFN.name);
+            
+            Coeff_=loadMAT(coeffFN.name);
             Coeff = Coeff_.Coeff;
             if numel(Coeff) < n
                 if rem(wait,10) == 0, time = toc; fprintf(fid,'wait for   n=%3i time=%6.03f, ncoeff:%i %s\n',n,time,numel(Coeff),coeffFN.name); wait = 1; end
@@ -74,7 +75,7 @@ cd('E:\MATLAB\TIRFcalibration\data\Ata01_5_125X100Y50x50_realtime')
                 time = toc; wait = 0; fprintf(fid,'updated    n=%3i time=%6.03f\n',n,time);
                 break; % continue
             end 
-            pause(0.010)
+            %pause(0.010)
         end
         try
             Coeff = Coeff(n);
@@ -128,6 +129,18 @@ cd('E:\MATLAB\TIRFcalibration\data\Ata01_5_125X100Y50x50_realtime')
     
     
 %===============================================================
+
+    function CoeffOut = loadMAT(coeffFN)
+        ME = 1;
+        while ~isempty(ME)
+            ME = [];
+            try 
+                CoeffOut=load(coeffFN);
+            catch ME
+                pause(0.001)
+            end
+        end
+    end
     function IMGfilt = detectFilter
         
         IMGfilt2 = nan(size(IMG));

@@ -1,11 +1,13 @@
 % reads the 'filename_001.tif' and data from tracking of 'filename_002.tif' 
 % processes 'filename_001.tif'
 function rtTrackSNR
-%cd('E:\MATLAB\TIRFcalibration\data\Ata01_5_125X100Y50x50_realtime');    
-    %cd waSeq\tracker\rtData
+pause(2)
+cd('E:\MATLAB\TIRFcalibration\data\Ata01_5_125X100Y50x50_realtime')    
+    cd waSeq\tracker\rtData
 
+test=[]; save test test
     dbgSel = 0;
-    dbgSNRvoronIMG = 1;
+    dbgSNRvoronIMG = 0;
     dbgSNRimg = 0; % SNR movie
     dbgSNR = 0; % intensity traces
     SNRmul = 1000; % for intesity scale 'SNRimg.tif'
@@ -16,7 +18,7 @@ function rtTrackSNR
     cfg = '..\..\..\cfgRT';
     c_=load(cfg);
     cfg = c_.cfg;
-   
+    
     tic; logFN = cfg.logSNR; fid = fopen(logFN,'w'); wait = 0;
     clck = clock; fprintf(fid,'start time m= %2i secs=%6.03f\n',clck(5),clck(6));
     
@@ -30,16 +32,10 @@ function rtTrackSNR
     acqTime = cfg.acqTime; % [s]
     stdWin = cfg.stdWin; % number of frames to calc. std
     mag = cfg.dispMag; % display size
-    mag=1;
-    SNRcolorThresh = cfg.SNRcolorThresh;
 
     digitFormat = sprintf('%%0%1ii',ndigit);
     s = floor(wsz/2); 
-    scrnSzIn = [1600 900];
-    scrnSz =get(0,'ScreenSize');
-    scrnSz = scrnSz(3:4);
-    scrnSzLeftBottom = scrnSz-scrnSzIn;
-    [mag, pos, szx, szy ] = calcMaxMag(zeros(szXY),mag,scrnSzIn);
+    [mag, pos, szx, szy ] = calcMaxMag(zeros(szXY),mag);
     szXYmag = [szx, szy];
     szYXmag = fliplr(szXYmag);
     SNRmovVoronoi = zeros([szYXmag 3]);
@@ -62,19 +58,12 @@ function rtTrackSNR
     %% SNR image figure
     if dbgSNRvoronIMG
         tit = 'SNR voronoi image';
-        %pos(1) = pos(1) - 800;
-        %pos(1) = pos(1)- 700;        
-        figSNRvoronIMG = figure('DoubleBuffer','on','Menubar','none','Name',tit,'NumberTitle','off','Colormap',gray(256),'Position',[pos szXYmag(1) szXYmag(2)]);
+        pos(1) = pos(1) - 800;
+        pos(1) = pos(1)- 700;        
+        figSNRvoronIMG = figure('DoubleBuffer','on','Menubar','none','Name',tit,'NumberTitle','off','Colormap',gray(256),'Position',[pos/2 szXYmag(1) szXYmag(2)]);
         axeSNRvoron = axes('Parent',figSNRvoronIMG,'DataAspectRatio',[1 1 1],'Position',[0 0 1 1],'Visible','off','Nextplot','replacechildren','XLim',0.5+[0 szXYmag(1)],'YLim',0.5+[0 szXYmag(2)]);
     end
     
-    %% SNR plot
-    szx2 = szx;
-    szy2 = scrnSzIn(2)-szy-45;
-    pos2 = [pos(1) scrnSzLeftBottom(2)];
-    figSNRplot = figure('DoubleBuffer','on','Menubar','none','Name',tit,'NumberTitle','off','Colormap',gray(256),'Position',[pos2 szx2 szy2]);
-    %axeSNRplot = axes('Parent',figSNRplot,'DataAspectRatio',[1 1 1],'Position',[0 0 1 1],'Visible','off','Nextplot','replacechildren','XLim',0.5+[0 szXYmag(1)],'YLim',0.5+[0 szXYmag(2)]);
-
     if dbgSNRimg
         tit = 'SNR image';
         pos(1) = pos(1) - 800;
@@ -133,7 +122,6 @@ function rtTrackSNR
     mlast = 0; % SM index for SNR
     ixFrm = 0; % frst frame (0 traces)
     XYS = [];
-    snrMean = [];
     while (1)        
         time = toc; fprintf(fid,'while loop n=%3i time=%6.03f\n',n,time);
         timeLoop(n) = toc;
@@ -162,11 +150,6 @@ function rtTrackSNR
             pause(0.010)
         end      
         n = n + 1;
-        
-        if n == 2 % pauses the rtWAmean to sync
-            test = []; save test test
-            fopen('..\..\..\logData\syncSignal.txt','w');
-        end
         
         fn_ = load(traceSeq); % trace MAT
         TraceX = fn_.TraceX;
@@ -323,30 +306,14 @@ function rtTrackSNR
         if ~isempty(Xs)
             XYS = [XYS;Xs' Ys' SNR']; 
         end
-        save(SNRdataFN,'ixFrm','XYS')
-        
-        
-        %% display
         
         mlast = mlast+m;
         ixFrm = [ixFrm mlast]; % indices of spots in each frame
         
-        % SNR data
-        isContinue = 0;
-        xys = XYS(ixFrm(n-1)+1:ixFrm(n),:);
-        if isempty(xys)
-            SNr =[]; isContinue = 1;
-            snrMean(n) = nan;
-        else
-            SNr = xys(:,3);
-            snrMean(n) = max(SNr);
-        end
         
-        % SNR voron
-        figure(figSNRvoronIMG)
         if dbgSNRvoronIMG
             t1 = toc;
-            SNRmovVoronoi = writeSNRvoronoiFrame;
+            SNRmovVoronoi = writeSNRvoronoiFrame(n);
             t2 = toc;
             %figure(figSNRvoronIMG)
             %imagesc(SNRmovVoronoi);
@@ -354,27 +321,7 @@ function rtTrackSNR
             %pause
         end
         
-        if isContinue, continue; end
-        
-        % SNR plot
-        figure(figSNRplot)
-        nBars = 13;
-        snrBarsDisp = snrMean;
-        xd1 = 1;
-        if n > nBars
-            xd1 = n - nBars+1;
-            %snrBarsDisp = snrMean(xd1:n);
-        end
-        bar(snrBarsDisp)
-        L1 = SNRcolorThresh(1);
-        L2 = SNRcolorThresh(2);
-        xd2 = xd1 + nBars;
-        line([0 xd2],[L1 L1],'Color','r')
-        line([0 xd2],[L2 L2],'Color','g')
-        xlim([xd1-0.5 xd2])
-        ylim([0 10])
-        xticks(xd1:xd1+nBars-1);
-        
+        save(SNRdataFN,'ixFrm','XYS')
 
         continue
          
@@ -441,9 +388,9 @@ function rtTrackSNR
         SNR2d = reshape(SNRimg,[szXYmag(2)*szXYmag(1) nfr]);
         SNR2dSUM = sum(SNR2d,1);
         SNR2dNUM = sum(SNR2d>0,1);
-        snrmean = SNR2dSUM./SNR2dNUM;
+        snrMean = SNR2dSUM./SNR2dNUM;
 
-        plot(snrmean); 
+        plot(snrMean); 
         title('SNR mean')
         xlabel('frames')
         ylabel('SNR')   
@@ -607,30 +554,28 @@ function rtTrackSNR
     end
 
 
-    function SNRmovVoronoi = writeSNRvoronoiFrame
+    function SNRmovVoronoi = writeSNRvoronoiFrame(i)
         CM = gray(256);
-        if numel(SNr) < 5 % write a blank image
+        xys = XYS(ixFrm(i-1)+1:ixFrm(i),:);
+        if size(xys,1)<5 % write a blank image
             SNRmovVoronoi = zeros(szXY*mag);
             %imwrite(SNRmovVoronoi,SNRmovieVoronoiFN,'WriteMode','append','Compression', 'none') 
         else
-%SNRcolorThresh = [.1 5];
+            snrDisp = xys(:,3);
+
             % SNR intensity range scales
-            if max(SNr)<SNRcolorThresh(1)
-                sscale = SNRcolorThresh(1);
+            if max(snrDisp)<1.5 
+                sscale = 1.5;
                 EdgeColorSel = 1; % red
-            elseif max(SNr)<SNRcolorThresh(2)
-                sscale = SNRcolorThresh(2);
+            elseif max(snrDisp)<5
+                sscale = 5;
                 EdgeColorSel = 2; % green 
-            elseif max(SNr)<SNRcolorThresh(3)
-                sscale = SNRcolorThresh(3);
+            else % max(snrDisp)<10
+                sscale = 10;
                 EdgeColorSel = 3; % blue
-            else % max > SNRcolorThresh(3)
-                sscale = SNRcolorThresh(3)*2;
-                EdgeColorSel = 3; % blue
-                
             end
-            [SNRmovVoronoi,tPatch(n)] = getVoronoinImg(figSNRvoronIMG,xys(:,1:2),SNr/sscale,szXY,mag,CM,EdgeColorSel);
-            imwrite(SNRmovVoronoi,SNRmovieVoronoiFN,'WriteMode','append','Compression', 'none') 
+            [SNRmovVoronoi,tPatch(n)] = getVoronoinImg(figSNRvoronIMG,xys(:,1:2),snrDisp/sscale,szXY,mag,CM,EdgeColorSel);
+            %imwrite(SNRmovVoronoi,SNRmovieVoronoiFN,'WriteMode','append','Compression', 'none') 
         end
     end
 

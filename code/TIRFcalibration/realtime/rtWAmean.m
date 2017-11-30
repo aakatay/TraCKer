@@ -12,8 +12,6 @@ function rtWAmean
     ndigit = cfg.ndigit; % # of digits for sequence number
     digitFormat = sprintf('%%0%1ii',ndigit);
     outDIR = 'waSeq\';
-    if exist(outDIR), rmdir(outDIR,'s'); end
-    mkdir(outDIR)
 
     %% set filenames and array
     fname0_ = load('fname0');
@@ -41,8 +39,24 @@ function rtWAmean
     fdbck.inSaveCountingMAX = cfg.inSaveCountingMAX;
     fdbck.inStop = 0;
     
+    nSync = waWin+2;
     while (1)
         %pause(0.2)
+        
+        if 0 && n == nSync % wait for sync signal
+            while ~exist('syncSignal.txt')
+                D = dir([fname0 '*.tif']);
+                CD = struct2cell(D);
+                dates = cell2mat(CD(6,:));
+                [~,ix]=sort(dates);
+                lastFn = D(ix(end)).name;
+                lastn = str2num(lastFn(end-ndigit-3:end-4));
+                nJump = lastn - nSync;
+                save('logData\syncJump','nJump');
+                n = lastn;
+            end
+        end
+        
         time = toc; fprintf(fid,'while loop n=%3i time=%6.03f\n',n,time);
         tl(n) = toc;
         while (1) % wait for update
@@ -71,7 +85,6 @@ function rtWAmean
         Awa_ = imread(fnameSeq);
         Awa(:,:,1) = Awa_(cy0:cy1,cx0:cx1);
         
-        %if n == 20, pause(10); end
         
         if n>=waWin
                 t1 = toc;

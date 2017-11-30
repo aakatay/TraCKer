@@ -1,11 +1,37 @@
 function rtTraCKerTrace
 % minTraceLength = 2
 % traceJmpForCombination = 1
-cd('E:\MATLAB\TIRFcalibration\data\Ata01_5_125X100Y50x50_realtime')    
-    %% files
+%cd('E:\MATLAB\TIRFcalibration\data\Ata01_5_125X100Y50x50_realtime'); 
     cd waSeq\tracker\
+    %% files
+    
     cfg_ = load('..\..\cfgRT');
     cfg = cfg_.cfg;
+    
+    
+    
+    if 0
+        tic
+        n = 20;
+        A = 500;
+        a = zeros(n);
+        for i = 1:n
+            a(i) = max(abs(eig(rand(A))));
+        end
+        t1 = toc;
+
+        gcp
+        tic
+        a = zeros(n);
+        parfor i = 1:n
+            a(i) = max(abs(eig(rand(A))));
+        end
+        t2 = toc;
+        fid = fopen('timetest.txt','w');
+        fprintf(fid,'t1: %.02f; t2: %.02f',t1,t2);
+        fclose(fid);
+        return;
+    end
     
     sptJmpForTracing = cfg.sptJmpForTracing;
     dn = cfg.sptReAppearTime;
@@ -18,7 +44,7 @@ cd('E:\MATLAB\TIRFcalibration\data\Ata01_5_125X100Y50x50_realtime')
         wsz = cfg.wszTracker; % window size for SM crop
     %wsz = 5; % window size for SM crop
     w = floor(wsz/2);
-    
+    outDIR = 'rtData\';
     
     tic; logFN = cfg.logTrace; fid = fopen(logFN,'w'); wait = 0;
     clck = clock; fprintf(fid,'start time m= %2i secs=%6.03f\n',clck(5),clck(6));
@@ -27,11 +53,7 @@ cd('E:\MATLAB\TIRFcalibration\data\Ata01_5_125X100Y50x50_realtime')
     if dn>2, error('update the code (sptReAppearTime)'); end
     pNlim = [200000 400000 600000 800000];
     pns = genPrimeNumSet(pNlim); % pNlim --> pns : (3,10000)
-        
-    outDIR = 'rtData\';
-    if exist(outDIR), rmdir(outDIR,'s'); end
-    mkdir(outDIR)
-    
+            
     NT1_ = 0;
     %%
     digitFormat = sprintf('''%%0%1ii''',ndigit);
@@ -74,15 +96,16 @@ cd('E:\MATLAB\TIRFcalibration\data\Ata01_5_125X100Y50x50_realtime')
                 time = toc; wait = 0; fprintf(fid,'updated    n=%3i time=%6.03f\n',n,time);
                 break; % continue
             end 
-            if 0 
+            if 1 
                 TLOOP = tloop(2:end)-tloop(1:end-1);
                 nv = 1:n-1;
-                plotyy(nv,TLOOP,nv,tsave)
-                plot([TLOOP;tsave]')
-                title(sprintf('mean time : %.03f',mean(TLOOP)));
-                legend(['loop' ;'save'])
+                %plotyy(nv,TLOOP,nv,tsave)
+                plot([TLOOP;tsave;tprm]')
+                title(sprintf('mean time : %.03f',mean(tprm)));
+                legend('loop' ,'save','primes')
+                return;
             end
-            pause(0.010)
+            %pause(0.010)
         end
         posfn = posFN.name;
         
@@ -101,9 +124,20 @@ cd('E:\MATLAB\TIRFcalibration\data\Ata01_5_125X100Y50x50_realtime')
         pnImg = genPrimeNumImg(YC,XC,szYX,pns,snc,wsz,npos);
         pnIMG(:,:,1) = pnImg;
         pnIMG1 = pnIMG(:,:,1);
-        nt1 = sum(isprime(unique(pnIMG1(~isnan(pnIMG1)))));
-        ixtc = nan(1,nt1);% trace indices in the current frame
+        %pnIMG1 = abs(pnIMG(:,:,2));
+        uniqImg = unique(pnIMG1(~isnan(pnIMG1(:))));
+        uprm = isprime(uniqImg);
+        uprm(uprm>pns(snc,numel(YC)))=0;
         
+        nt1 = sum(uprm);
+        ixtc = nan(1,nt1); % trace indices in the current frame
+        
+        if 0         
+            pnIMG2 = abs(pnIMG(:,:,2));
+            prms = unique(pnIMG2(~isnan(pnIMG2)));
+            mxPrm = max(prms(isprime(prms)));
+            nt2 = sum(isprime(prms));
+        end
         
         nSPOTs(n) = length(XC); % number of spots in that frame
         %ixSpt = ixSptFrm(n):ixSptFrm(n)+nSPOTs(n)-1; % indices of the spots in the current frame
@@ -128,11 +162,14 @@ cd('E:\MATLAB\TIRFcalibration\data\Ata01_5_125X100Y50x50_realtime')
             nt2 = sum(isprime(unique(pnIMG2(~isnan(pnIMG2)))));
             figure(11); imagesc(pnIMG(:,:,1)); figure(12); imagesc(pnIMG(:,:,2)); 
         end
-        
-        for i = 1:nt % each trace
+        tprm(n) = 0;
+        parfor i = 1:nt % each trace
             if pnMatch(i) == 0, continue;end % no matching with prev frame
             %fct = factor(abs(pnMatch(i)));
+            tprm0 = toc;
             fct = factorFast(abs(pnMatch(i)),pns(snc,:),pns(snp,:));
+            tprm2 = toc;
+            tprm(n) = tprm(n)+tprm2-tprm0;
             if numel(fct) ~=2, a='disp(fct)';continue; % overlapping traces
             else % match found : (numel(fct)=2)
                 [fixc,fixp] = getFix(n,'c','p');
@@ -146,7 +183,7 @@ cd('E:\MATLAB\TIRFcalibration\data\Ata01_5_125X100Y50x50_realtime')
                     %tix = ixtp(tix_);
                     
                     TraceX{tix} = [TraceX{tix} XC(ixc)];
-                    checkTX(1)
+                    %checkTX(1)
                     TraceY{tix} = [TraceY{tix} YC(ixc)];
                     trInf(tix,2) = trInf(tix,2)+1; % num frames
                     
@@ -156,7 +193,7 @@ cd('E:\MATLAB\TIRFcalibration\data\Ata01_5_125X100Y50x50_realtime')
                     tracex = [XP(ixp) XC(ixc)];
                     tracey = [YP(ixp) YC(ixc)];
                     TraceX{end+1} = tracex;
-                    checkTX(2)
+                    %checkTX(2)
                     TraceY{end+1} = tracey;
                     trInf(end+1,1) = n-1; % frst frame
                     trInf(end,2) = 2; % num frames
@@ -165,6 +202,7 @@ cd('E:\MATLAB\TIRFcalibration\data\Ata01_5_125X100Y50x50_realtime')
                 end
             end
         end
+        
         %% 2: check 2frm before (with a gap)
         if n == 2 % second frame only
             n = 3; 
@@ -279,7 +317,7 @@ cd('E:\MATLAB\TIRFcalibration\data\Ata01_5_125X100Y50x50_realtime')
         %sn: set number
         % max 1e4 localizations in a frame
         smMap = zeros(szYX);
-        smMap(sub2ind(szYX,round(YC),round(XC))) = pns(snc,1:npos);
+        smMap(sub2ind(szYX,ceil(YC),ceil(XC))) = pns(snc,1:npos);
         pnImg = int32(conv2(int32(smMap),ones(wsz),'same'));
     end
     
