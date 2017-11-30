@@ -1,6 +1,10 @@
 
 % 'style','text','BackgroundColor',[1 1 1],
     clear; close all;
+    
+
+ddxx = [];
+ddyy = [];
     F = findall(0,'type','figure','tag','TMWWaitbar'); delete(F)
     isTraceOnly = 1;
     isCropXY = 0;
@@ -118,7 +122,7 @@
             Frames = numel(infFN);
         end
         clear infFN;
-            lastFrm = Frames;open
+            lastFrm = Frames;
         
         Frames = floor(Frames);
     end
@@ -583,7 +587,7 @@
             
             [B,L] = bwboundaries(BW,'noholes');
             
-            dbg = 1;
+            dbg = 0;
             if dbg
                 dbgDetectFN = 'dbgDetect.tif';
                 delete(dbgDetectFN);
@@ -616,7 +620,6 @@
                 Y(ixSpt(m))=Y_;
                 INT(ixSpt(m)) = INT_;
                 frmNoSpot(ixSpt(m)) = k;
-
                 i = i + 1;
             end
             waitbar(k/Frames,h,'localizing ...')
@@ -673,7 +676,11 @@
     %cd ..;    
 %return
     
-    
+    if 0 % check pixelation
+        [max(ddxx) min(ddxx) max(ddyy) min(ddyy) ]
+        figure;    hist(ddxx,20)
+        figure; hist(ddyy,20)
+    end
     
     
     

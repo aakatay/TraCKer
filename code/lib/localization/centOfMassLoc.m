@@ -40,6 +40,7 @@ y1 = yy + 1; y2 = yy + WindowSize;
 xx = Px-(WindowSize+1)/2;
 x1 = xx + 1; x2 = xx + WindowSize;
 Window=IMG(y1:y2,x1:x2);
+%if isdbg,figure(890); imagesc(Window);axis image; end
 
 %DEFINE Big Window
 yy = PyBW-(BigWindowSize+1)/2;
@@ -98,4 +99,8 @@ Y_=double(Py)+Yc(k)-double((WindowSize+1)/2);
 
 X_ = X_-dPx;
 Y_ = Y_-dPy;
+
+
+%ddxx = [ddxx double(Px0) - X_];
+%ddyy = [ddyy double(Py0) - Y_];
 ccc=4;

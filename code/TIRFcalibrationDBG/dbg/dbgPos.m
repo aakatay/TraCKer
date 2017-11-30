@@ -7,7 +7,7 @@ close all;
 % 3: copy outputs to the same folder run isOverlay = 1
 
 isOverlay = 0;
-isRT = 1;
+isRT = 0;
 A = zeros(50);
 
 % output fles
@@ -16,7 +16,7 @@ posFN = 'dbgPos.tif';
 posOverlayFN = 'dbgPosOverlay.tif';
 
 if isOverlay
-    stackOverlay(posRTfn,posFN,posOverlayFN,0,[]);
+    stackOverlay(posRTfn,posFN,posOverlayFN,0,[]); % red and green
 else
 
     if isRT
