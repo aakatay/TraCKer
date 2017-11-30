@@ -163,7 +163,7 @@ function rtTraCKerTrace
             figure(11); imagesc(pnIMG(:,:,1)); figure(12); imagesc(pnIMG(:,:,2)); 
         end
         tprm(n) = 0;
-        parfor i = 1:nt % each trace
+        for i = 1:nt % each trace
             if pnMatch(i) == 0, continue;end % no matching with prev frame
             %fct = factor(abs(pnMatch(i)));
             tprm0 = toc;
