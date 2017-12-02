@@ -8,28 +8,10 @@ function rtTraCKerTrace
     cfg_ = load('..\..\cfgRT');
     cfg = cfg_.cfg;
     
-    if 0
-        tic
-        n = 20;
-        A = 500;
-        a = zeros(n);
-        for i = 1:n
-            a(i) = max(abs(eig(rand(A))));
-        end
-        t1 = toc;
-
-        gcp
-        tic
-        a = zeros(n);
-        parfor i = 1:n
-            a(i) = max(abs(eig(rand(A))));
-        end
-        t2 = toc;
-        fid = fopen('timetest.txt','w');
-        fprintf(fid,'t1: %.02f; t2: %.02f',t1,t2);
-        fclose(fid);
-        return;
-    end
+    
+    
+    
+    
     
     sptJmpForTracing = cfg.sptJmpForTracing;
     dn = cfg.sptReAppearTime;
@@ -50,7 +32,7 @@ function rtTraCKerTrace
     % prime numbers
     if dn>2, error('update the code (sptReAppearTime)'); end
     pNlim = [200000 400000 600000 800000];
-    pns = double(genPrimeNumSet(pNlim)); % pNlim --> pns : (3,10000)
+    pns = genPrimeNumSet(pNlim); % pNlim --> pns : (3,10000)
             
     NT1_ = 0;
     %%
@@ -75,14 +57,13 @@ function rtTraCKerTrace
     X=[];Y=[];INT=[];
     TraceX={};TraceY={};
     trInf = [];
-    pnIMG = zeros([szYX dn+1],'double');
+    pnIMG = nan([szYX dn+1]);
     while (1)
         time = toc; fprintf(fid,'while loop n=%3i time=%6.03f\n',n,time);
         %% output filename
         digitTXT = eval(['sprintf(' digitFormat ',n)'] );
         traceDataFileNm = [outDIR 'traceData_' label '_' digitTXT '.mat'];
         
-            tprm01 = toc;
         %% load data
         while (1) % wait for update
             tloop(n)=toc;
@@ -99,9 +80,9 @@ function rtTraCKerTrace
                 TLOOP = tloop(2:end)-tloop(1:end-1);
                 nv = 1:n-1;
                 %plotyy(nv,TLOOP,nv,tsave)
-                plot([TLOOP;tsave;tprm(:,1)';tprm(:,2)']')
-                title(sprintf('mean time : %.03f',mean(tprm(:,2))));
-                legend('loop' ,'save','primes1','primes2')
+                plot([TLOOP;tsave;tprm]')
+                title(sprintf('mean time : %.03f',mean(tprm)));
+                legend('loop' ,'save','primes')
                 return;
             end
             %pause(0.010)
@@ -152,73 +133,58 @@ function rtTraCKerTrace
         
         %% 1: check prev frame
         pnMATCH = pnIMG(:,:,1).*pnIMG(:,:,2); 
-        pnMatch = unique(pnMATCH(~isnan(pnMATCH)))';
-        nm = numel(pnMatch); % # of matchings
-        mv = 1:nm; % match vector
-        
-        pns1 = pns(snc,:)';
-        PNS1 = repmat(pns1,1,nm);
-        pns2 = pns(snp,:);
-        
-            tprm0 = toc;
-        FCT = factorFast(abs(pnMatch),PNS1,pns2);
-        nt = size(FCT,2);
-            tprm2 = toc;
-            tprm(n,1) = tprm2-tprm0;
-        
-        
+        %%
+        pnMatch = unique(pnMATCH(~isnan(pnMATCH)));
+        nt = numel(unique(abs(pnMatch)));
+        if numel(pnMatch) ~= nt % BUG
+            ccc=2;
+        end
         if 0 
             pnIMG2 = pnIMG(:,:,2);
             nt2 = sum(isprime(unique(pnIMG2(~isnan(pnIMG2)))));
             figure(11); imagesc(pnIMG(:,:,1)); figure(12); imagesc(pnIMG(:,:,2)); 
         end
-        xcrC = []; ycrC = [];
-        xcrP = []; ycrP = [];
+        tprm(n) = 0;
         for i = 1:nt % each trace
-            mix = mv(i);
-            if pnMatch(mix) == 0, continue;end % no matching with prev frame
+            if pnMatch(i) == 0, continue;end % no matching with prev frame
             %fct = factor(abs(pnMatch(i)));
-            %fct = factorFast(abs(pnMatch(i)),pns(snc,:),pns(snp,:));
-            [fixc,fixp] = getFix(n,'c','p');
-            ixc = find(FCT(fixc,i) == pns(snc,:)); % index to XC YC arrays
-            ixp = find(FCT(fixp,i) == pns(snp,:)); % index to XP YP arrays
-            
-            xcrC = [xcrC XC(ixc)]; % mark in the image
-            ycrC = [ycrC YC(ixc)];
-
-            %tix_ = find(ismember(ixtp,ixp)); % check traces in prev frame
-            tix = ixtp(ixp); % check traces in prev frame
-            if  ~isnan(tix) % add to the trace
-                %tix = ixtp(tix_);
-
-                TraceX{tix} = [TraceX{tix} XC(ixc)];
-                %checkTX(1)
-                TraceY{tix} = [TraceY{tix} YC(ixc)];
-                trInf(tix,2) = trInf(tix,2)+1; % num frames
+            tprm0 = toc;
+            fct = factorFast(abs(pnMatch(i)),pns(snc,:),pns(snp,:));
+            tprm2 = toc;
+            tprm(n) = tprm(n)+tprm2-tprm0;
+            if numel(fct) ~=2, a='disp(fct)';continue; % overlapping traces
+            else % match found : (numel(fct)=2)
+                [fixc,fixp] = getFix(n,'c','p');
+                ixc = find(fct(fixc) == pns(snc,:)); % index to XC YC arrays
+                ixp = find(fct(fixp) == pns(snp,:)); % index to XP YP arrays
+                pnIMG(:,:,1) = pnIMGremoveLocalization(pnIMG(:,:,1),YC(ixc),XC(ixc),w,szXY);
                 
-    
-                ixtc(ixc) = tix; % index to TraceX 
-                ixtp(ixtp==tix)=nan;
-            elseif pnMatch(mix)>0 % new trace
-                tracex = [XP(ixp) XC(ixc)];
-                tracey = [YP(ixp) YC(ixc)];
-                TraceX{end+1} = tracex;
-                %checkTX(2)
-                
-                TraceY{end+1} = tracey;
-                trInf(end+1,1) = n-1; % frst frame
-                trInf(end,2) = 2; % num frames
-                ixtc(ixc) = numel(TraceX); % index to TraceX 
-                xcrP = [xcrP XP(ixp)]; % mark in the image
-                ycrP = [ycrP YP(ixp)];
+                %tix_ = find(ismember(ixtp,ixp)); % check traces in prev frame
+                tix = ixtp(ixp); % check traces in prev frame
+                if  ~isnan(tix) % add to the trace
+                    %tix = ixtp(tix_);
+                    
+                    TraceX{tix} = [TraceX{tix} XC(ixc)];
+                    checkTX(1)
+                    TraceY{tix} = [TraceY{tix} YC(ixc)];
+                    trInf(tix,2) = trInf(tix,2)+1; % num frames
+                    
+                    ixtc(ixc) = tix; % index to TraceX 
+                    ixtp(ixtp==tix)=nan;
+                elseif pnMatch(i)>0 % new trace
+                    tracex = [XP(ixp) XC(ixc)];
+                    tracey = [YP(ixp) YC(ixc)];
+                    TraceX{end+1} = tracex;
+                    checkTX(2)
+                    TraceY{end+1} = tracey;
+                    trInf(end+1,1) = n-1; % frst frame
+                    trInf(end,2) = 2; % num frames
+                    ixtc(ixc) = numel(TraceX); % index to TraceX 
+                    pnIMG(:,:,2) = pnIMGremoveLocalization(pnIMG(:,:,2),YP(ixp),XP(ixp),w,szXY);
+                end
             end
         end
-        % mark in the image
-        pnIMG(:,:,1) = pnIMGremoveLocalization(pnIMG(:,:,1),xcrC,ycrC,wsz);
-        pnIMG(:,:,2) = pnIMGremoveLocalization(pnIMG(:,:,2),xcrP,ycrP,wsz);
         
-            tprm02 = toc;
-            tprm(n,2) = tprm02-tprm01;
         %% 2: check 2frm before (with a gap)
         if n == 2 % second frame only
             n = 3; 
@@ -235,65 +201,49 @@ function rtTraCKerTrace
         end
         pnIMGr = pnIMG(:,:,1); % remaining
         pnIMGr(pnIMGr<0)=0;
-        
         pnMATCH = pnIMGr.*pnIMG(:,:,3); 
-        pnMatch = unique(pnMATCH(~isnan(pnMATCH)))';
-        nm = numel(pnMatch);
-        mv = 1:nm; % match vector
-        
-        pns1 = pns(snc,:)';
-        PNS1 = repmat(pns1,1,nm);
-        pns2 = pns(sng,:);
-        
-        
-        FCT = factorFast(abs(pnMatch),PNS1,pns2);
-        nt = size(FCT,2);
-        
-        xcrC = []; ycrC = [];
-        xcrG = []; ycrG = [];
+        pnMatch = unique(pnMATCH(~isnan(pnMATCH)));
+        nt = numel(unique(abs(pnMatch)));
         for i = 1:nt % each trace
-            mix = mv(i);
-            if pnMatch(mix) == 0, continue;end % no matching with prev frame
+            if pnMatch(i) == 0, continue;end % no matching with prev frame
             %fct = factor(abs(pnMatch(i)));
-            %fct = factorFast(abs(pnMatch(i)),pns(snc,:),pns(sng,:));
-            [fixc,fixg] = getFix(n,'c','g');
-            ixc = find(FCT(fixc,i) == pns(snc,:)); % index to XC YC arrays
-            ixg = find(FCT(fixg,i) == pns(sng,:)); % index to XP YP arrays
+            fct = factorFast(abs(pnMatch(i)),pns(snc,:),pns(sng,:));
+            if numel(fct) ~=2, a='disp(fct)';continue; % overlapping traces
+            elseif numel(fct) == 1, continue; % no matching with prev frame
+            else % match found : (numel(fct)=2)
+                [fixc,fixg] = getFix(n,'c','g');
+                ixc = find(fct(fixc) == pns(snc,:)); % index to XC YC arrays
+                ixg = find(fct(fixg) == pns(sng,:)); % index to XP YP arrays
             
-            xcrC = [xcrC XC(ixc)]; % mark in the image
-            ycrC = [ycrC YC(ixc)];
-            
-            %tix_ = find(ismember(ixtg,ixg)); % check traces in 2prev frame
-            tix = ixtg(ixg); % check traces in prev frame
-            if  ~isnan(tix) % add to the trace
-                xg = (TraceX{tix}(end)+XC(ixc))/2;
-                yg = (TraceY{tix}(end)+YC(ixc))/2;
+                pnIMG(:,:,1) = pnIMGremoveLocalization(pnIMG(:,:,1),YC(ixc),XC(ixc),w,szXY);
+                %tix_ = find(ismember(ixtg,ixg)); % check traces in 2prev frame
+                tix = ixtg(ixg); % check traces in prev frame
+           
+                if  ~isnan(tix) % add to the trace
+                    xg = (TraceX{tix}(end)+XC(ixc))/2;
+                    yg = (TraceY{tix}(end)+YC(ixc))/2;
 
-                TraceX{tix} = [TraceX{tix} xg XC(ixc)];
-                %checkTX(1)
-                TraceY{tix} = [TraceY{tix} yg YC(ixc)];
-                trInf(tix,2) = trInf(tix,2)+2; % num frames
-                ixtc(ixc) = tix; % index to TraceX 
-                ixtg(ixtg==tix)=nan;
-            elseif pnMatch(mix)>0 % new trace
-                xg = (XG(ixg)+XC(ixc))/2;
-                yg = (YG(ixg)+YC(ixc))/2;
-                tracex = [XG(ixg) xg XC(ixc)];
-                tracey = [YG(ixg) yg YC(ixc)];
-                TraceX{end+1} = tracex;
-                %checkTX(2)
-                TraceY{end+1} = tracey;
-                trInf(end+1,1) = n-2; % frst frame
-                trInf(end,2) = 3; % num frames
-                ixtc(ixc) = numel(TraceX); % index to TraceX 
-                xcrG = [xcrG XG(ixg)]; % mark in the image
-                ycrG = [ycrG YG(ixg)];
+                    TraceX{tix} = [TraceX{tix} xg XC(ixc)];
+                    checkTX(1)
+                    TraceY{tix} = [TraceY{tix} yg YC(ixc)];
+                    trInf(tix,2) = trInf(tix,2)+2; % num frames
+                    ixtc(ixc) = tix; % index to TraceX 
+                    ixtg(ixtg==tix)=nan;
+                elseif pnMatch(i)>0 % new trace
+                    xg = (XG(ixg)+XC(ixc))/2;
+                    yg = (YG(ixg)+YC(ixc))/2;
+                    tracex = [XG(ixg) xg XC(ixc)];
+                    tracey = [YG(ixg) yg YC(ixc)];
+                    TraceX{end+1} = tracex;
+                    checkTX(2)
+                    TraceY{end+1} = tracey;
+                    trInf(end+1,1) = n-2; % frst frame
+                    trInf(end,2) = 3; % num frames
+                    ixtc(ixc) = numel(TraceX); % index to TraceX 
+                    pnIMG(:,:,3) = pnIMGremoveLocalization(pnIMG(:,:,3),YG(ixg),XG(ixg),w,szXY);
+                end
             end
         end
-        % mark in the image
-        pnIMG(:,:,1) = pnIMGremoveLocalization(pnIMG(:,:,1),xcrC,ycrC,wsz);
-        pnIMG(:,:,3) = pnIMGremoveLocalization(pnIMG(:,:,3),xcrG,ycrG,wsz);
-        
         pnIMG = circshift(pnIMG,[0 0 1]);
         XG = XP; YG = YP; 
         XP = XC; YP = YC; 
@@ -309,12 +259,15 @@ function rtTraCKerTrace
     end
            
     % ====================================================================
-    function FCT = factorFast(num,pns1,pns2)
-        [FCTix1, numIx] = find(ismember(num./pns1,pns2));
-        FCT(1,:) = pns1(FCTix1,1);
-        FCT(2,:) = num(numIx)./FCT(1,:);
-        %ixr = FCT(1,:).*FCT(2,:) == num(numIx); FCT = FCT(:,ixr);
-        FCT = sort(FCT);
+    function fct = factorFast(num,pns1,pns2)
+        fct=[];
+        fctIx1 = find(ismember(num./pns1,pns2));
+        if ~isempty(fctIx1)
+            fct(1) = pns1(fctIx1);
+            fct(2) = num/fct(1);
+            fct = sort(fct);
+            ccc=4;
+        end
         
     end
 
@@ -345,9 +298,9 @@ function rtTraCKerTrace
         %  -- > pnImg
         %sn: set number
         % max 1e4 localizations in a frame
-        smMap = zeros(szYX,'double');
+        smMap = zeros(szYX);
         smMap(sub2ind(szYX,ceil(YC),ceil(XC))) = pns(snc,1:npos);
-        pnImg = double(conv2(smMap,ones(wsz,'double'),'same'));
+        pnImg = int32(conv2(int32(smMap),ones(wsz),'same'));
     end
     
     function pns = genPrimeNumSet(pNlim)
@@ -367,13 +320,14 @@ function rtTraCKerTrace
         pns(3,:) = pn_3(npn_2+1:npn_2+1e4);
     end
 
-    function pnIMGr = pnIMGremoveLocalization(pnIMGr,yc,xc,wsz)
-        pnimgNAN = ones(size(pnIMGr),'double');
-        pnimgNAN(sub2ind(size(pnIMGr),round(yc),round(xc))) = 1;
-        wnan = ones(wsz,'double');
-        pnimgNAN = double(conv2(pnimgNAN,wnan,'same'));
-        pnimgNAN(pnimgNAN>0) = -1;
-        pnIMGr = pnIMGr.*pnimgNAN;
+    function pnIMGr = pnIMGremoveLocalization(pnIMGr,yc,xc,w,szXY)
+        x1 = round(xc-w);
+        x2 = round(xc+w);
+        y1 = round(yc-w);
+        y2 = round(yc+w);
+        if x1<1, x1=1;end; if y1<1, y1=1; end
+        if x2>szXY(1), x2=szXY(1);end; if y2>szXY(2), y2=szXY(2); end
+        pnIMGr(y1:y2,x1:x2) = -pnIMGr(y1:y2,x1:x2); % remove the current localization
     end
     
     function [fixc,fixpg] = getFix(n,~,frm2)

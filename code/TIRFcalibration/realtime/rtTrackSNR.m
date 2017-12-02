@@ -2,7 +2,7 @@
 % processes 'filename_001.tif'
 function rtTrackSNR
 %cd('E:\MATLAB\TIRFcalibration\data\Ata01_5_125X100Y50x50_realtime');    
-    %cd waSeq\tracker\rtData
+    cd waSeq\tracker\rtData
 
     dbgSel = 0;
     dbgSNRvoronIMG = 1;
