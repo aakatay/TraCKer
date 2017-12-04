@@ -30,8 +30,8 @@ function runRTanalysis
     cfg.wszTracker = 5; % window size
     cfg.inSaveCountingMAX = numFrm2Save; % # frames to save
     cfg.cropTXT = [];
-    cfg.cropTXT = '125X100Y50x50';
-    cfg.cropTXT = '0X0Y512x512';
+    %cfg.cropTXT = '125X100Y50x50';
+    %cfg.cropTXT = '0X0Y512x512';
     cfg.cropTXT = '0X0Y260x260';
     cfg.dispMag = 4;
     cfg.logWA = [pwd '\logData\logWA.txt'];
@@ -40,6 +40,9 @@ function runRTanalysis
     cfg.logTrace = [pwd '\logData\logTrace.txt'];
     cfg.logSNR = [pwd '\logData\logSNR.txt'];
     cfg.SNRcolorThresh = [1.5 7 12];
+    cfg.mxNumLocalization = 2*1e3;
+    cfg.scrnSzIn = [1600 900];
+    cfg.isTlog = 1; % keeps times in TXT files in logData\
     
     %% folder structure
     
@@ -278,8 +281,8 @@ function runRTanalysis
         %% verify running codes
         p = gcp('nocreate');f1=parfeval(p,@rtWAmean,0);
         p = gcp('nocreate');f2=parfeval(p,@rtDetectThresh,0);
-        p = gcp('nocreate');f3=parfeval(p,@rtTraCKerPos,0);
-        p = gcp('nocreate');f4=parfeval(p,@rtTraCKerTrace,0);
+        p = gcp('nocreate');f3=parfeval(p,@rtTraCKerPos,0,cfg);
+        p = gcp('nocreate');f4=parfeval(p,@rtTraCKerTrace,0,cfg);
         %p = gcp('nocreate');f5=parfevalOnAll(p,@rtTrackSNR,0);
         while (1), if ~isempty(rdir('waSeq\*.tif')), break; end; pause(0.5);end
         set(lmp1,'Color',[0 1 0]);
@@ -289,7 +292,7 @@ function runRTanalysis
         set(lmp3,'Color',[0 1 0]);
         while (1), if ~isempty(rdir('waSeq\tracker\rtData\traceData_*.mat')), break; end; pause(0.5); end
         set(lmp4,'Color',[0 1 0]);
-        rtTrackSNR
+        rtTrackSNR(cfg)
 
         if 0
             deleteALLparallelPools
@@ -297,13 +300,14 @@ function runRTanalysis
     end
 
     function prepFigSNRdata
+        return;
         w = cfg.w;
         h = cfg.h;
         szXY = [w h];
         mag = cfg.dispMag; % display size
         
         %% SNR image figure
-        [mag, pos, szx, szy ] = calcMaxMag(zeros(szXY),mag);
+        [mag, pos, szx, szy ] = calcMaxMag(zeros(szXY),mag,cfg.scrnSzIn);
         szXYmag = [szx, szy];
         szYXmag = fliplr(szXYmag);
 

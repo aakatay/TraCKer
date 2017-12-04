@@ -1,11 +1,27 @@
 % reads the 'filename_001.tif' and data from tracking of 'filename_002.tif' 
 % processes 'filename_001.tif'
-function rtTrackSNR
+function rtTrackSNR(varargin)
 %cd('E:\MATLAB\TIRFcalibration\data\Ata01_5_125X100Y50x50_realtime');    
-    cd waSeq\tracker\rtData
-
+    if nargin == 1
+        cfg = varargin{1};
+        PWD = cfg.pwd;
+        cd(PWD)
+        q=0;
+        pause(1);
+        while q == 0
+            try 
+                cd waSeq\tracker\rtData
+                q = 1;
+            catch
+                q=0;
+                %save PWD PWD
+                %pause(1);
+            end
+        end
+    end
+    
     dbgSel = 0;
-    dbgSNRvoronIMG = 1;
+    dbgSNRvoronIMG = 0;
     dbgSNRimg = 0; % SNR movie
     dbgSNR = 0; % intensity traces
     SNRmul = 1000; % for intesity scale 'SNRimg.tif'
@@ -17,8 +33,6 @@ function rtTrackSNR
     c_=load(cfg);
     cfg = c_.cfg;
    
-    tic; logFN = cfg.logSNR; fid = fopen(logFN,'w'); wait = 0;
-    clck = clock; fprintf(fid,'start time m= %2i secs=%6.03f\n',clck(5),clck(6));
     
     ndigit = cfg.ndigit; % # of digits for sequence number
     label = cfg.label;
@@ -30,8 +44,13 @@ function rtTrackSNR
     acqTime = cfg.acqTime; % [s]
     stdWin = cfg.stdWin; % number of frames to calc. std
     mag = cfg.dispMag; % display size
-    mag=1;
+    scrnSzIn = cfg.scrnSzIn;
+    mag=cfg.dispMag;
     SNRcolorThresh = cfg.SNRcolorThresh;
+    isTlog = cfg.isTlog;
+    tic
+    if isTlog, tic; logFN = cfg.logSNR; fid = fopen(logFN,'w'); wait = 0; end
+    if isTlog, clck = clock; fprintf(fid,'start time m= %2i secs=%6.03f\n',clck(5),clck(6)); end
 
     digitFormat = sprintf('%%0%1ii',ndigit);
     s = floor(wsz/2); 
@@ -59,6 +78,7 @@ function rtTrackSNR
     snrSTDplotFN = 'SNRstdplot.tif';
     SNRdataFN = 'SNRdata.mat';
     
+    delete(SNRmovieVoronoiFN);
     %% SNR image figure
     if dbgSNRvoronIMG
         tit = 'SNR voronoi image';
@@ -69,6 +89,7 @@ function rtTrackSNR
     end
     
     %% SNR plot
+    tit = 'SNR plot';
     szx2 = szx;
     szy2 = scrnSzIn(2)-szy-45;
     pos2 = [pos(1) scrnSzLeftBottom(2)];
@@ -135,13 +156,13 @@ function rtTrackSNR
     XYS = [];
     snrMean = [];
     while (1)        
-        time = toc; fprintf(fid,'while loop n=%3i time=%6.03f\n',n,time);
+        if isTlog, time = toc; fprintf(fid,'while loop n=%3i time=%6.03f\n',n,time); end
         timeLoop(n) = toc;
         %% load data
         while (1) % wait for update
             traceSeq = [traceFN label '_' num2str(n+1,digitFormat) '.mat'];
             if ~exist(traceSeq)
-                if wait == 0, time = toc; fprintf(fid,'wait for   n=%3i time=%6.03f\n',n,time); wait = 1; end
+                if isTlog, if wait == 0, time = toc; fprintf(fid,'wait for   n=%3i time=%6.03f\n',n,time); wait = 1; end; end
                 %writeSNRvoronoiMov
                 %playSNRvoronoiMov
                 %runAnalysisWin
@@ -156,7 +177,7 @@ function rtTrackSNR
                 [fdbck] = funcFeedback(cfg.msgTXT,fdbck,fcall);
                 if fdbck.inStop, break;  end % STOP
             else
-                time = toc; wait = 0; fprintf(fid,'updated    n=%3i time=%6.03f\n',n,time);
+                if isTlog, time = toc; wait = 0; fprintf(fid,'updated    n=%3i time=%6.03f\n',n,time); end
                 break; % continue
             end 
             pause(0.010)
@@ -167,11 +188,21 @@ function rtTrackSNR
             test = []; save test test
             fopen('..\..\..\logData\syncSignal.txt','w');
         end
-        
-        fn_ = load(traceSeq); % trace MAT
-        TraceX = fn_.TraceX;
-        TraceY = fn_.TraceY;
-        trInf = fn_.trInf;
+
+        q=0;
+        while q == 0
+            try 
+                fn_ = load(traceSeq); % trace MAT
+                TraceX = fn_.TraceX;
+                TraceY = fn_.TraceY;
+                trInf = fn_.trInf;
+                q = 1;
+            catch
+                q=0;
+                %save PWD PWD
+                pause(.01);
+            end
+        end        
 
         %% read trace data
         X = TraceX;
@@ -343,8 +374,8 @@ function rtTrackSNR
         end
         
         % SNR voron
-        figure(figSNRvoronIMG)
         if dbgSNRvoronIMG
+            figure(figSNRvoronIMG)
             t1 = toc;
             SNRmovVoronoi = writeSNRvoronoiFrame;
             t2 = toc;

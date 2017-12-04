@@ -1,27 +1,12 @@
-function rtTraCKerPos(varargin)
+function rtTraCKerPos
 % RUN in waSeq\tracker\
 % 'style','text','BackgroundColor',[1 1 1],
     % F = findall(0,'type','figure','tag','TMWWaitbar'); delete(F)
     
           
-    if nargin == 1
-        cfg = varargin{1};
-        PWD = cfg.pwd;
-        cd(PWD)
-        q=0;
-        pause(1);
-        while q == 0
-            try 
-                cd waSeq\tracker\
-                q = 1;
-            catch
-                q=0;
-                %save PWD PWD
-                %pause(1);
-            end
-        end
-    end
-
+    pause(0.1)
+%cd('E:\MATLAB\TIRFcalibration\data\Ata01_5_125X100Y50x50_realtime');    
+    cd waSeq\tracker\
     cfg = '..\..\cfgRT';
     cfg_=load(cfg);
     cfg = cfg_.cfg;
@@ -84,7 +69,7 @@ function rtTraCKerPos(varargin)
             Coeff_=loadMAT(coeffFN.name);
             Coeff = Coeff_.Coeff;
             if numel(Coeff) < n
-                if isTlog, if rem(wait,10) == 0, time = toc; fprintf(fid,'wait for   n=%3i time=%6.03f, ncoeff:%i %s\n',n,time,numel(Coeff),coeffFN.name); wait = 1; end; end
+                if isTlog, f rem(wait,10) == 0, time = toc; fprintf(fid,'wait for   n=%3i time=%6.03f, ncoeff:%i %s\n',n,time,numel(Coeff),coeffFN.name); wait = 1; end; end
                 wait = wait + 1;
                 %[fdbck] = funcFeedback(cfg.msgTXT,fdbck,fcall);
                 %if fdbck.inStop, break;  end % STOP
@@ -94,46 +79,48 @@ function rtTraCKerPos(varargin)
             end 
             pause(0.010)
         end
-        Coeff = Coeff(n);
-        digitTXT = eval(['sprintf(' digitFormat ',n)'] );
-        fnameSeq = ['..\' fname 'WA_' digitTXT '.tif'];
-        CoeffThresh = Coeff(end);
-        posDataFileNm = sprintf('posData-coeff%i_%s_%s.mat',round(Coeff),label,digitTXT);
+        try
+            Coeff = Coeff(n);
+            digitTXT = eval(['sprintf(' digitFormat ',n)'] );
+            fnameSeq = ['..\' fname 'WA_' digitTXT '.tif'];
+            CoeffThresh = Coeff(end);
+            posDataFileNm = sprintf('posData-coeff%i_%s_%s.mat',round(Coeff),label,digitTXT);
 
-        %% FIND X & Y
-        IMG = double(imread(fnameSeq,1)); % READ IMAGE
-%            IMG(90:94,1:4)=IMG(95:99,1:4); % ======remove
-        IMGfilt = detectFilter; % IMG --> IMGfilt
-        [din,BW] = detectThreshold; % (IMGfilt,CoeffThresh) --> (BW,din)
-        if isempty(find( din > 0, 1)), continue; end
-        [B,~] = bwboundaries(BW,'noholes');
-        dbg = 0;
-        if dbg
-            dbgDetectFN = 'dbgDetect.tif';
-            delete(dbgDetectFN);
-            imwrite(uint16(IMG),dbgDetectFN,'tif','WriteMode','append')
-            imwrite(uint16(IMGfilt),dbgDetectFN,'tif','WriteMode','append')
-            imwrite(uint16(din),dbgDetectFN,'tif','WriteMode','append')
-            imwrite(uint16(BW),dbgDetectFN,'tif','WriteMode','append')
-        end
-
-        %% (center of mass localization)
-        ixSpt = 1;
-        X = []; Y = []; INT = [];
-        for m=1:length(B) % for each spot
-            [X_,Y_] = centOfMassLoc; % B --> (X_, Y_)
-
-            if X_ < 0.5 || X_ > En1-0.5 || Y_ < 0.5 || Y_ > Boy1-0.5 
-                % ignore the spot if in the edge
-                continue;
+            %% FIND X & Y
+            IMG = double(imread(fnameSeq,1)); % READ IMAGE
+    %            IMG(90:94,1:4)=IMG(95:99,1:4); % ======remove
+            IMGfilt = detectFilter; % IMG --> IMGfilt
+            [din,BW] = detectThreshold; % (IMGfilt,CoeffThresh) --> (BW,din)
+            if isempty(find( din > 0, 1)), continue; end
+            [B,~] = bwboundaries(BW,'noholes');
+            dbg = 0;
+            if dbg
+                dbgDetectFN = 'dbgDetect.tif';
+                delete(dbgDetectFN);
+                imwrite(uint16(IMG),dbgDetectFN,'tif','WriteMode','append')
+                imwrite(uint16(IMGfilt),dbgDetectFN,'tif','WriteMode','append')
+                imwrite(uint16(din),dbgDetectFN,'tif','WriteMode','append')
+                imwrite(uint16(BW),dbgDetectFN,'tif','WriteMode','append')
             end
-            X(ixSpt)=X_;
-            Y(ixSpt)=Y_;
-            INT(ixSpt) = INT_;
-            ixSpt = ixSpt + 1;
-        end 
-        save(posDataFileNm,'X','Y','INT');
-        n = n + 1;
+
+            %% (center of mass localization)
+            ixSpt = 1;
+            X = []; Y = []; INT = [];
+            for m=1:length(B) % for each spot
+                [X_,Y_] = centOfMassLoc; % B --> (X_, Y_)
+
+                if X_ < 0.5 || X_ > En1-0.5 || Y_ < 0.5 || Y_ > Boy1-0.5 
+                    % ignore the spot if in the edge
+                    continue;
+                end
+                X(ixSpt)=X_;
+                Y(ixSpt)=Y_;
+                INT(ixSpt) = INT_;
+                ixSpt = ixSpt + 1;
+            end 
+            save(posDataFileNm,'X','Y','INT');
+            n = n + 1;
+            
         
     end
     

@@ -4,12 +4,15 @@ function rtWAmean
     cfg_=load('cfgRT');
     cfg = cfg_.cfg;
         
-    tic; logFN = cfg.logWA; fid = fopen(logFN,'w'); wait = 0;
-    clck = clock; fprintf(fid,'start time m= %2i secs=%6.03f\n',clck(5),clck(6));
     
     waWin = cfg.waWin; % walkiong average window length
     acqTime = cfg.acqTime; % [s]
     ndigit = cfg.ndigit; % # of digits for sequence number
+    isTlog = cfg.isTlog;
+    if isTlog, tic; logFN = cfg.logWA; fid = fopen(logFN,'w'); wait = 0; end
+    if isTlog, clck = clock; fprintf(fid,'start time m= %2i secs=%6.03f\n',clck(5),clck(6)); end
+    clck = clock;
+    
     digitFormat = sprintf('%%0%1ii',ndigit);
     outDIR = 'waSeq\';
 
@@ -57,8 +60,8 @@ function rtWAmean
             end
         end
         
-        time = toc; fprintf(fid,'while loop n=%3i time=%6.03f\n',n,time);
-        tl(n) = toc;
+        if isTlog, time = toc; fprintf(fid,'while loop n=%3i time=%6.03f\n',n,time); end
+        %tl(n) = toc;
         while (1) % wait for update
             dbgWaitAcqTime(clck)
             fnameSeq = [fname0 num2str(n,digitFormat) '.tif'];
@@ -69,15 +72,15 @@ function rtWAmean
                     plot([ tloop;twrt ]')
                     legend('loop' ,'write')
                 end
-                if wait == 0, time = toc; fprintf(fid,'wait for   n=%3i time=%6.03f\n',n,time);wait = 1;end
+                if isTlog, if wait == 0, time = toc; fprintf(fid,'wait for   n=%3i time=%6.03f\n',n,time);wait = 1;end; end
                 [fdbck] = funcFeedback(cfg.msgTXT,fdbck,fcall);
                 if fdbck.inStop, break;  end % STOP
             else
-                wait = 0; time = toc; fprintf(fid,'updated    n=%3i time=%6.03f\n',n,time);
+                if isTlog, wait = 0; time = toc; fprintf(fid,'updated    n=%3i time=%6.03f\n',n,time); end
                 clck = clock;
                 break; % continue
             end 
-            %pause(0.1)
+            pause(0.010)
         end
         
         
@@ -87,21 +90,16 @@ function rtWAmean
         
         
         if n>=waWin
-                t1 = toc;
             A = uint16(mean(Awa,3));
-                t2 = toc;
-                twrt(n) = t2-t1;
             nWA = n - waWin+1;
             fnameWaSeq = [outDIR fname0 'WA_' num2str(nWA,digitFormat) '.tif'];
             ME = 1;
             while ~isempty(ME)
                 ME = [];
-                t1 = toc;
                 try imwrite(A,fnameWaSeq);
                 catch ME
                     disp(sprintf('error in writing, trying again | frame number: %i',i)); %#ok<DSPS>
                 end
-                t2 = toc;
                 
                 %pause(acqTime/10)
             end
