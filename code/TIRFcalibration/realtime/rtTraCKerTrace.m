@@ -326,7 +326,6 @@ tsave(n) = tsave2-tsave0;
     % ====================================================================
 
     function [FCT,nix] = factorFast1(num,pns1,pns2,pnms)
-        pNlim
 ffT1 = toc;
         % pnms: prime number multiple set
         if num(1)==0,num(1)=[];end

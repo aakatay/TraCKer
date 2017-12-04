@@ -78,7 +78,7 @@ function rtTrackSNR(varargin)
     snrSTDplotFN = 'SNRstdplot.tif';
     SNRdataFN = 'SNRdata.mat';
     
-    delete(SNRmovieVoronoiFN);
+    if exist(SNRmovieVoronoiFN), delete(SNRmovieVoronoiFN); end
     %% SNR image figure
     if dbgSNRvoronIMG
         tit = 'SNR voronoi image';
