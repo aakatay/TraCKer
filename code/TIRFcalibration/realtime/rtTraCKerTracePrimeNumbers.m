@@ -23,28 +23,24 @@ function rtTraCKerTrace(varargin)
                 %pause(1);
             end
         end
-    else
-        cfg_ = load('..\..\cfgRT'); cfg = cfg_.cfgSave;
     end
     %PWD = pwd;     save PWD PWD
     
     %% files
     ffT =[];
+    cfg_ = load('..\..\cfgRT');
+    cfg = cfg_.cfg;
     np = cfg.mxNumLocalization; % max localizations in a frame
         
-    waWin = cfg.waWin; % walkiong average window length
     sptJmpForTracing = cfg.sptJmpForTracing;
     dn = cfg.sptReAppearTime;
     ndigit = cfg.ndigit; % # of digits for sequence number
     label = cfg.label; % # of digits for sequence number
-    tloopPause = cfg.tloopPause;
     w = cfg.w;
     h = cfg.h;
     isTlog = cfg.isTlog;
-    timeOut = cfg.timeOut;
     tic;
-    fid=[];
-    if isTlog, logFN = cfg.logTrace; fid = fopen(logFN,'w'); wait = 0; end
+    if isTlog, tic; logFN = cfg.logTrace; fid = fopen(logFN,'w'); wait = 0; end
     if isTlog, clck = clock; fprintf(fid,'start time m= %2i secs=%6.03f\n',clck(5),clck(6)); end
     
     szXY = [w h];
@@ -67,23 +63,14 @@ function rtTraCKerTrace(varargin)
 
     %% feedback to calling function
     fcall = 'rtTraCKerTrace';
-    btnMAT              = '..\..\signals\btnMAT.mat';
-    MATrtTraCKerTrace   = '..\..\signals\MATrtTraCKerTrace.mat';
-    quitToutMAT         = '..\..\signals\quitTout.mat';
-    % fdbck inputs to funcFeedback : 
-    fdbck.nFrst         = 0;
-    fdbck.nLast         = 0;
-    fdbck.runProcess    = 0;
-    fdbck.syncWait      = 0;
-    fdbck.toutOn        = 0;
-    fdbck.syncHere      = 0;
-    fdbck.isStop        = 0;
-    fdbck.ssSnap        = 0;
-    fdbck.ssSave        = 0;
-    % fdbck inputs/outputs to funcFeedback: 
-    fdbck.isSS          = 0;
-    fdbck.inSS          = 0;
-    fdbck.dispSS        = 0;
+    fdbck.inWait = 0;
+    fdbck.inWaitCounting = 0;
+    fdbck.inPause = 0;
+    fdbck.inSave = 0;
+    fdbck.inSaveCounting = 0;
+    fdbck.inSaveCountingIX = 0;
+    fdbck.inSaveCountingMAX = cfg.inSaveCountingMAX;
+    fdbck.inStop = 0;    
     
     %% loop
     ixSptFrm = 1; % first spot in the frame
@@ -93,8 +80,6 @@ function rtTraCKerTrace(varargin)
     TraceX={};TraceY={};
     trInf = [];
     pnIMG = zeros([szYX dn+1],'double');
-    isStop = 0;
-    tout =[]; % timeout
     while (1)
 
 tprm0 = toc; % vvvvvvvvvvvvvvvvvvvvvvvvv
@@ -107,64 +92,15 @@ tprm0 = toc; % vvvvvvvvvvvvvvvvvvvvvvvvv
         while (1) % wait for update
             tloop(n)=toc;
             posFN = rdir(['posData-coeff*_' label '_' digitTXT '.mat']);
-
-            b_=load(btnMAT); btnStart = b_.btnStart; btnSync = b_.btnSync; btnSnap = b_.btnSnap; btnSave = b_.btnSave; btnStop = b_.btnStop; 
-            if btnStop >= 0
-                isStop = 1;
-                break;
-            end
-            if fdbck.toutOn == 1 % timeout
-                if exist(quitToutMAT) % quit timeout
-                    fdbck.toutOn = -1;
-                else
-                    continue;
-                end
-            elseif fdbck.toutOn == -1
-                if fdbck.runProcess % reset timeout
-                    fdbck.toutOn = 0;
-                    tout = [];
-                end   
-            end
-            
-            if fdbck.syncWait % wait for sync
-                while ~exist(syncFrameMAT) % wait for sync data
-                    pause(0.01)
-                end
-                syncMAT=load(syncFrameMAT); nLastSync = syncMAT.nLast; % sync frame
-                n = nLastSync;
-                if fdbck.syncHere
-                    if btnSync == -1 % reset sync
-                        fdbck.syncWait = 0;
-                        fdbck.syncHere = 0;
-                    end
-                else
-                    fdbck.syncHere=1; 
-                end
-            elseif btnSync >= 0 && btnStart==1
-                fdbck.syncWait = 1;
-            end    
-            fdbck.nFrst = n;
-            fdbck.nLast = n + waWin - 1;
-            
-            
-            fdbck.runProcess = 0;
-            if ~isempty(posFN) % newData
-                if fdbck.syncWait 
-                    if fdbck.syncHere % process update
-                        fdbck.runProcess = 1;
-                    end
-                else % process update
-                    fdbck.runProcess = 1; 
-                end
-            elseif fdbck.toutOn==0
-                if isempty(tout)
-                    tout = toc; % time wait
-                elseif toc-tout > timeOut % timeout 
-                    fdbck.toutOn = 1;
-                end
-            end
-            
-            if 0&& exist('tprm')
+            if isempty(posFN)
+                if isTlog, if wait == 0, time = toc; fprintf(fid,'wait for   n=%3i time=%6.03f\n',n,time); wait = 1; end; end
+                [fdbck] = funcFeedback(cfg.msgTXT,fdbck,fcall);
+                if fdbck.inStop, break;  end % STOP
+            else
+                if isTlog, time = toc; wait = 0; fprintf(fid,'updated    n=%3i time=%6.03f\n',n,time); end
+                break; % continue
+            end 
+            if exist('tprm')
                 save('rtTraCKerTraceTIME.mat','tprm','tloop','ffT'); 
                 if ~isCallOutside
                     TLOOP=[];
@@ -172,20 +108,7 @@ tprm0 = toc; % vvvvvvvvvvvvvvvvvvvvvvvvv
                     return;
                 end
             end
-            [fdbck] = funcFeedback(cfg,fdbck,fcall);
-            if fdbck.runProcess % process new data
-                if isTlog, wait = 0; time = toc; fprintf(fid,'updated    n=%3i time=%6.03f\n',n,time); end
-                clck = clock;                 
-                break; 
-            else % wait
-                if isTlog, if wait == 0, time = toc; fprintf(fid,'wait for   n=%3i time=%6.03f\n',n,time);wait = 1;end; end
-            end 
-            pause(tloopPause)
-        end
-        if isStop
-            if exist('fid'), fclose(fid);end
-            lmpState = -1; save(MATrtTraCKerTrace,'lmpState','-append'); % stop
-            break;
+            %pause(0.010)
         end
         posfn = posFN.name;
         

@@ -2,6 +2,7 @@ function [IMG,tPatch] = getVoronoinImg(figSNRvoronIMG,x,cellColor,szXY,mag,CM,Ed
 % displays scattering centers in voronoi cells
 % test : getVoronoinImg(gallery('uniformdata',[10 2],5)*50,[50 50],8)
 %tPatch = [];
+    isDispPatch = 0; % shows patches with edge and center
     isSymmetricCorrection = 1;
     isDisp = 0; 
     EdgeColor = [1 0 0; 0 1 0; 0 0 1; 1 1 1]; % red green blue
@@ -153,13 +154,20 @@ function [IMG,tPatch] = getVoronoinImg(figSNRvoronIMG,x,cellColor,szXY,mag,CM,Ed
         if all(c{i}~=1)   % If at least one of the indices is 1, 
                           % then it is an open region and we can't 
                           % patch that.
-            p = patch(v(c{i},1),v(c{i},2),[1 1 1]*cellColor2(i),'EdgeColor',EdgeColor(EdgeColorSel,:)); % use color i.
+
+            if isDispPatch   
+                p = patch(v(c{i},1),v(c{i},2),[1 1 1]*cellColor2(i),'EdgeColor',EdgeColor(EdgeColorSel,:)); % use color i.
+            else
+                p = patch(v(c{i},1),v(c{i},2),[1 1 1]*cellColor2(i),'EdgeColor','none'); % use color i.
+            end
             %p = patch(v(c{i},1),v(c{i},2),[1 1 1]*cellColor2(i)); % use color i.
             cccc = 33;
         end
     end
     hold on;
-    scatter(x3(:,1),x3(:,2),'.','r')
+    if isDispPatch   
+        scatter(x3(:,1),x3(:,2),'.','r')
+    end
     %scatter(v(:,1),v(:,2),'.','r')
     hold off
     

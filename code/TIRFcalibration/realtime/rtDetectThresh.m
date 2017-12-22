@@ -1,4 +1,4 @@
-function rtDetectThresh
+function rtDetectThresh(varargin)
 %% CORRECTION: remove a line cropping an area
 % detects threshold for tracking
 % output Coeff.mat
@@ -11,20 +11,46 @@ function rtDetectThresh
 % image PEAKs =======
 % histogram peak (image PEAKs)
 
-%cd('E:\MATLAB\TIRFcalibration\data\Ata01_5_125X100Y50x50_realtime');    
-    cd waSeq
+    isCallOutside = 0;
+    if nargin == 1
+        isCallOutside = 1;
+        cfg = varargin{1};
+        PWD = cfg.pwd;
+        cd(PWD)
+        q=0;
+        pause(1);
+        while q == 0
+            try 
+                cd waSeq\
+                q = 1;
+            catch
+                q=0;
+                %save PWD PWD
+                %pause(1);
+            end
+        end
+    else
+        load ..\cfgRT;
+        cfg = cfgSave;
+    end        
+    
+    
     %test = []; save test test
     
     dbg = 0;
 
-    load ..\cfgRT;
+    
+    waWin = cfg.waWin; % walkiong average window length
     acqTime = cfg.acqTime; % [s]
     ndigit = cfg.ndigit; % # of digits for sequence number
     w = cfg.w;
     h = cfg.h;
     bc = cfg.bc; % [nM] background concentration
+    tloopPause = cfg.tloopPause;
     isTlog = cfg.isTlog;
-    if isTlog, tic; logFN = cfg.logThresh; fid = fopen(logFN,'w'); wait = 0; end
+    timeOut = cfg.timeOut;
+    tic; 
+    if isTlog, logFN = cfg.logThresh; fid = fopen(logFN,'w'); wait = 0; end
     if isTlog, clck = clock; fprintf(fid,'start time m= %2i secs=%6.03f\n',clck(5),clck(6)); end
     
 
@@ -50,30 +76,103 @@ function rtDetectThresh
     
     %% feedback to calling function
     fcall = 'rtDetectThresh';
-    fdbck.inWait = 0;
-    fdbck.inWaitCounting = 0;
-    fdbck.inPause = 0;
-    fdbck.inSave = 0;
-    fdbck.inSaveCounting = 0;
-    fdbck.inSaveCountingIX = 0;
-    fdbck.inSaveCountingMAX = cfg.inSaveCountingMAX;
-    fdbck.inStop = 0;    
+    btnMAT              = '..\signals\btnMAT.mat';
+    MATrtDetectThresh   = '..\signals\MATrtDetectThresh.mat';
+    quitToutMAT         = '..\signals\quitTout.mat';
+    % fdbck inputs to funcFeedback : 
+    fdbck.nFrst         = 0;
+    fdbck.nLast         = 0;
+    fdbck.runProcess    = 0;
+    fdbck.syncWait      = 0;
+    fdbck.toutOn        = 0;
+    fdbck.syncHere      = 0;
+    fdbck.isStop        = 0;
+    fdbck.ssSnap        = 0;
+    fdbck.ssSave        = 0;
+    % fdbck inputs/outputs to funcFeedback: 
+    fdbck.isSS          = 0;
+    fdbck.inSS          = 0;
+    fdbck.dispSS        = 0; 
 
     n = 1;
+    isStop = 0;
+    tout =[]; % timeout
     while (1)
         if isTlog, time = toc; fprintf(fid,'while loop n=%3i time=%6.03f\n',n,time); end
 
         while (1) % wait for update
             fnameSeq = [fname0 'WA_' num2str(n,digitFormat) '.tif'];
-            if ~exist(fnameSeq) % wait for update
-                if isTlog, if wait == 0, time = toc; fprintf(fid,'wait for   n=%3i time=%6.03f\n',n,time); wait = 1; end; end
-                %return;
-                [fdbck] = funcFeedback(cfg.msgTXT,fdbck,fcall);
-                if fdbck.inStop, break;  end % STOP
-            else
-                if isTlog, time = toc; wait = 0; fprintf(fid,'updated    n=%3i time=%6.03f\n',n,time); end
-                break; % continue
+
+            b_=load(btnMAT); btnStart = b_.btnStart; btnSync = b_.btnSync; btnSnap = b_.btnSnap; btnSave = b_.btnSave; btnStop = b_.btnStop; 
+            if btnStop >= 0
+                isStop = 1;
+                break;
+            end
+            if fdbck.toutOn == 1 % timeout
+                if exist(quitToutMAT) % quit timeout
+                    fdbck.toutOn = 0;
+                else
+                    continue;
+                end
+            elseif fdbck.toutOn == -1
+                if fdbck.runProcess % reset timeout
+                    fdbck.toutOn = 0;
+                    tout = [];
+                end   
+            end
+            
+            if fdbck.syncWait % wait for sync
+                while ~exist(syncFrameMAT) % wait for sync data
+                    pause(0.01)
+                end
+                syncMAT=load(syncFrameMAT); nLastSync = syncMAT.nLast; % sync frame
+                n = nLastSync;
+                if fdbck.syncHere
+                    if btnSync == -1 % reset sync
+                        fdbck.syncWait = 0;
+                        fdbck.syncHere = 0;
+                    end
+                else
+                    fdbck.syncHere=1; 
+                end
+            elseif btnSync >= 0 && btnStart==1
+                fdbck.syncWait = 1;
+            end           
+            fdbck.nFrst = n;
+            fdbck.nLast = n + waWin - 1;
+            
+            fdbck.runProcess = 0;
+            if exist(fnameSeq) % newData
+                if fdbck.syncWait 
+                    if fdbck.syncHere % process update
+                        fdbck.runProcess = 1;
+                    end
+                else % process update
+                    fdbck.runProcess = 1; 
+                end
+            elseif fdbck.toutOn==0
+                if isempty(tout)
+                    tout = toc; % time wait
+                elseif toc-tout > timeOut % timeout 
+                    fdbck.toutOn = 1;
+                end
+            end    
+            
+            
+            [fdbck] = funcFeedback(cfg,fdbck,fcall);
+            if fdbck.runProcess % process new data
+                if isTlog, wait = 0; time = toc; fprintf(fid,'updated    n=%3i time=%6.03f\n',n,time); end
+                clck = clock;                 
+                break; 
+            else % wait
+                if isTlog, if wait == 0, time = toc; fprintf(fid,'wait for   n=%3i time=%6.03f\n',n,time);wait = 1;end; end
             end 
+            pause(tloopPause)
+        end
+        if isStop
+            if exist('fid'), fclose(fid);end
+            lmpState = -1; save(MATrtDetectThresh,'lmpState','-append'); % stop
+            break;
         end
 
         %% image

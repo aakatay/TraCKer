@@ -1,7 +1,7 @@
 clear all;
 load cfgRT
 fclose('all');
-
+cfg = cfgSave;
 waWin = cfg.waWin;
 stdWin = cfg.stdWin;
 

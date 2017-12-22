@@ -1,80 +1,152 @@
-function [fdbck] = funcFeedback(msgTXT,fdbck,fcall)
-% feedback towards the host function
-    return;
-    inWait = fdbck.inWait;
-    inWaitCounting = fdbck.inWaitCounting;
-    inPause = fdbck.inPause;
-    inSave = fdbck.inSave;
-    inSaveCounting = fdbck.inSaveCounting;
-    inSaveCountingIX = fdbck.inSaveCountingIX;
-    inSaveCountingMAX = fdbck.inSaveCountingMAX;
-    inStop = 0;
+function [fdbck] = funcFeedback(cfg,fdbck,fcall)
+% feedback connections
 
-    if inWait
-        if inWaitCounting
-            tw = toc; % time wait
-            if tw > 5 % timeout [seconds]
-                funcFeedbackPaused; % check for pause and stay paused
-            end
-        else
-            tic;
-            inWaitCounting = 1;
-        end
-    elseif inPause
-        pause(1)
-        if ~exist(msgTXT), inPause = 0; end
-    else
-        inWait = 1;
+    %% INPUTS
+    % fdbck inputs : 
+    % nFrst nLast runProcess syncHere syncWait toutOn isStop ssSnap ssSave 
+    % fdbck inputs/outputs : 
+    isSS                = fdbck.isSS;
+    inSS                = fdbck.inSS;
+    dispSS              = fdbck.dispSS;
+    
+    % worker MAT files
+    MATrtWAmean         = 'signals\MATrtWAmean.mat';
+    MATrtDetectThresh   = '..\signals\MATrtDetectThresh.mat';
+    MATrtTraCKerPos     = '..\..\signals\MATrtTraCKerPos.mat';
+    MATrtTraCKerTrace   = '..\..\signals\MATrtTraCKerTrace.mat';
+    MATrtTrackSNR       = '..\..\..\signals\MATrtTrackSNR.mat';
+    
+    %syncFrameMAT        = 'syncFrame.mat';2
+    %quitToutMAT         = 'quitTout.mat';
+    
+    % button MAT file
+    btnMAT              = 'signals\btnMAT.mat';
+    
+    %% associate MAT files to calling worker
+    func_rtWAmean = 0;
+    if strcmp(fcall,'rtWAmean')
+        matFN = MATrtWAmean; 
+        func_rtWAmean = 1;
+    elseif strcmp(fcall,'rtDetectThresh')
+        matFN = MATrtDetectThresh; 
+        btnMAT = ['..\' btnMAT];
+        funcIx = 2;
+    elseif strcmp(fcall,'rtTraCKerPos')
+        matFN = MATrtTraCKerPos;
+        btnMAT = ['..\..\' btnMAT]; 
+        funcIx = 3;
+    elseif strcmp(fcall,'rtTraCKerTrace')
+        matFN = MATrtTraCKerTrace; 
+        btnMAT = ['..\..\' btnMAT];
+        funcIx = 4;
+    elseif strcmp(fcall,'rtTrackSNR')
+        matFN = MATrtTrackSNR; 
+        btnMAT = ['..\..\..\' btnMAT];
+        funcIx = 5;
+    end
+    tloopPause = cfg.tloopPause;
+    
+    %% lamps (only display)
+    if fdbck.runProcess
+        lmpState = 1;
+        save(matFN,'lmpState','-append');
+    elseif fdbck.syncWait
+        lmpState = -1i;
+        save(matFN,'lmpState','-append');
+    elseif fdbck.toutOn == 1 % timeout
+        lmpState = 0;
+        save(matFN,'lmpState','-append');
+    elseif fdbck.syncHere
+        lmpState = 1i;
+        save(matFN,'lmpState','-append');
+    elseif fdbck.isStop
+        lmpState = -1;
+        save(matFN,'lmpState','-append');
     end
     
-    fdbck.inWait = inWait;
-    fdbck.inWaitCounting = inWaitCounting;
-    fdbck.inPause = inPause;
-    fdbck.inSave = inSave;
-    fdbck.inSaveCounting = inSaveCounting;
-    fdbck.inSaveCountingIX = inSaveCountingIX;
-    fdbck.inStop = inStop;
-    
-            
-            
-    function funcFeedbackPaused % paused feedback
-        if exist(msgTXT)
-            fid = fopen(msgTXT,'r');
-            ln = fgetl(fid);
-            fclose(fid)
-            if isempty(ln) % pause
-                fTXT = sprintf(fid,'msg-paused_ %s.txt',fcall);
-                fid = fopen(fTXT,'r');
-                fclose(fid)
-                inPause = 1; inWait = 0; inWaitCounting = 0;
-                
-                
-            elseif strcmp(ln,'SAVE') % save
-                if inSave
-                    if inSaveCounting
-                        inSaveCountingIX = inSaveCountingIX + 1; 
-                        if inSaveCountingIX >= inSaveCountingMAX % all saved
-                            fTXT = sprintf(fid,'msg-stopped_ %s.txt',fcall);
-                            fid = fopen(fTXT,'r');
-                            fclose(fid);        
-                        end
-                    else
-                        inSaveCounting = 1;
-                    end
-                else
-                    inSave = 1;
-                end
-                
-                
-            elseif strcmp(ln,'STOP') % stop
-                inStop = 1;
-                fTXT = sprintf(fid,'msg-stopped_ %s.txt',fcall);
-                fid = fopen(fTXT,'r');
-                fclose(fid)                
+    %% snap/save
+    if dispSS % display done quit Snap/Save
+        inSS = 0; dispSS = 0;
+        if ssSnap
+            btnSync = 0; save(btnMAT,'btnSync','-Append'); %pushSync
+        elseif ssSave
+            btnStop = 0; save(btnMAT,'btnStop','-Append'); %pushStop
+        end 
+        btnSnap = -1; save(btnMAT,'btnSnap','-append');  % snapping is inactive
+        btnSave = -1; save(btnMAT,'btnSave','-append');  % saving is inactive
+    elseif isSS
+        if inSS == 0
+            if ssSnap, btnSnap = 1; save(btnMAT,'btnSnap','-append'); end % snapping is active
+            if ssSave, btnSave = 1; save(btnMAT,'btnSave','-append'); end % saving is active
+        end 
+        inSS = inSS + 1;
+        if inSS > cfg.SnapNumFrames*ssSnap + cfg.SaveNumFrames*ssSave % stop snapping
+            isSS = 0;
+            dispSS = 1;
+        end
+    end
+
+    %% timeout
+    load(btnMAT);
+    if strcmp(fcall,'rtWAmean')
+        if fdbck.toutOn == 1
+            btnStart = -1;
+            btnSync = -1;
+            btnSnap = -1;
+            btnSave = -1;
+            btnStop = -1;    
+            save(btnMAT,'btnStart', 'btnSync', 'btnSnap', 'btnSave', 'btnStop');
+        elseif fdbck.toutOn == -1 % restarting
+            if btnStart == -1  
+                btnStart = 0;
+                save(btnMAT,'btnStart','-append');  
             end
-                
-            cc=3;
-        end % # exist
-    end % #func
+        end
+    elseif strcmp(fcall,'rtTrackSNR') 
+        if fdbck.toutOn == -1 % restarted
+            if btnStart == 0
+                btnStart = 1;
+                save(btnMAT,'btnStart','-append');
+            end
+        end
+    end
+    nFrst = fdbck.nFrst;
+    nLast = fdbck.nLast;
+    save(matFN,'nFrst','nLast','-append');
+
+    %% outputs:
+    fdbck.isSS      = isSS;
+    fdbck.inSS      = inSS;
+    fdbck.dispSS    = dispSS;
+
+% 
+% 
+% 
+%     function funcTimeOut % paused feedback
+%         while 1 % wait for btnSync
+%             btnMAT_=load(btnMAT); btnSync = btnMAT_.btnSync;
+%             if btnSync>0, restart = 1; noUpdate = 1; inSnap = 0; break; end
+%             pause(tloopPause)
+%         end
+%     end
+% 
+% 
+%     function funcFeedbackPaused % paused feedback
+%         inPause = 1; inWait = 0; inWaitCounting = 0;
+%         if isSnap
+%             lmpState = 2; 
+%         elseif isSave
+%             ;
+%         else
+%             lmpState = 0; % timeout or sync
+%         end
+%         save(matFN,'lmpState','-append'); % display pause
+%         while 1 % wait for btnStart
+%             btnMAT_=load(btnMAT); btnStart = btnMAT_.btnStart;
+%             if btnStart>0, restart = 1; noUpdate = 1; inSnap = 0; break; end
+%             pause(tloopPause)
+%         end
+%                 
+%     end % #func
     
 end

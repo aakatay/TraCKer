@@ -144,6 +144,9 @@ title(ixIntFaultTx)
         imgFig = getframe(gcf); 
         figCap = imgFig.cdata;
         imwrite(figCap,recruitmentTraceResultsFN,'WriteMode','append','Compression', 'none') 
+        
+
+
 
 
 %% =========== PITS TIF STACK =========================

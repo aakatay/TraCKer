@@ -23,28 +23,24 @@ function rtTraCKerTrace(varargin)
                 %pause(1);
             end
         end
-    else
-        cfg_ = load('..\..\cfgRT'); cfg = cfg_.cfgSave;
     end
     %PWD = pwd;     save PWD PWD
     
     %% files
     ffT =[];
+    cfg_ = load('..\..\cfgRT');
+    cfg = cfg_.cfg;
     np = cfg.mxNumLocalization; % max localizations in a frame
         
-    waWin = cfg.waWin; % walkiong average window length
     sptJmpForTracing = cfg.sptJmpForTracing;
     dn = cfg.sptReAppearTime;
     ndigit = cfg.ndigit; % # of digits for sequence number
     label = cfg.label; % # of digits for sequence number
-    tloopPause = cfg.tloopPause;
     w = cfg.w;
     h = cfg.h;
     isTlog = cfg.isTlog;
-    timeOut = cfg.timeOut;
     tic;
-    fid=[];
-    if isTlog, logFN = cfg.logTrace; fid = fopen(logFN,'w'); wait = 0; end
+    if isTlog, tic; logFN = cfg.logTrace; fid = fopen(logFN,'w'); wait = 0; end
     if isTlog, clck = clock; fprintf(fid,'start time m= %2i secs=%6.03f\n',clck(5),clck(6)); end
     
     szXY = [w h];
@@ -55,10 +51,10 @@ function rtTraCKerTrace(varargin)
     outDIR = 'rtData\';
     
     
-    % prime numbers
+    % multiplier numbers
     if dn>2, error('update the code (sptReAppearTime)'); end
-    pNlim = [200000 400000 600000 800000];
-    [pns,pnsMul] = genPrimeNumSet(pNlim); % pNlim --> pns : (3,10000)
+    mNlim = [2000 4000 6000 8000];
+    [mns,mnsMul] = genMultiplierNumSet(mNlim); % mNlim --> mns : (3,2000)
             
     NT1_ = 0;
     %%
@@ -67,23 +63,14 @@ function rtTraCKerTrace(varargin)
 
     %% feedback to calling function
     fcall = 'rtTraCKerTrace';
-    btnMAT              = '..\..\signals\btnMAT.mat';
-    MATrtTraCKerTrace   = '..\..\signals\MATrtTraCKerTrace.mat';
-    quitToutMAT         = '..\..\signals\quitTout.mat';
-    % fdbck inputs to funcFeedback : 
-    fdbck.nFrst         = 0;
-    fdbck.nLast         = 0;
-    fdbck.runProcess    = 0;
-    fdbck.syncWait      = 0;
-    fdbck.toutOn        = 0;
-    fdbck.syncHere      = 0;
-    fdbck.isStop        = 0;
-    fdbck.ssSnap        = 0;
-    fdbck.ssSave        = 0;
-    % fdbck inputs/outputs to funcFeedback: 
-    fdbck.isSS          = 0;
-    fdbck.inSS          = 0;
-    fdbck.dispSS        = 0;
+    fdbck.inWait = 0;
+    fdbck.inWaitCounting = 0;
+    fdbck.inPause = 0;
+    fdbck.inSave = 0;
+    fdbck.inSaveCounting = 0;
+    fdbck.inSaveCountingIX = 0;
+    fdbck.inSaveCountingMAX = cfg.inSaveCountingMAX;
+    fdbck.inStop = 0;    
     
     %% loop
     ixSptFrm = 1; % first spot in the frame
@@ -92,9 +79,7 @@ function rtTraCKerTrace(varargin)
     X=[];Y=[];INT=[];
     TraceX={};TraceY={};
     trInf = [];
-    pnIMG = zeros([szYX dn+1],'double');
-    isStop = 0;
-    tout =[]; % timeout
+    mnIMG = zeros([szYX dn+1],'double');
     while (1)
 
 tprm0 = toc; % vvvvvvvvvvvvvvvvvvvvvvvvv
@@ -107,64 +92,15 @@ tprm0 = toc; % vvvvvvvvvvvvvvvvvvvvvvvvv
         while (1) % wait for update
             tloop(n)=toc;
             posFN = rdir(['posData-coeff*_' label '_' digitTXT '.mat']);
-
-            b_=load(btnMAT); btnStart = b_.btnStart; btnSync = b_.btnSync; btnSnap = b_.btnSnap; btnSave = b_.btnSave; btnStop = b_.btnStop; 
-            if btnStop >= 0
-                isStop = 1;
-                break;
-            end
-            if fdbck.toutOn == 1 % timeout
-                if exist(quitToutMAT) % quit timeout
-                    fdbck.toutOn = -1;
-                else
-                    continue;
-                end
-            elseif fdbck.toutOn == -1
-                if fdbck.runProcess % reset timeout
-                    fdbck.toutOn = 0;
-                    tout = [];
-                end   
-            end
-            
-            if fdbck.syncWait % wait for sync
-                while ~exist(syncFrameMAT) % wait for sync data
-                    pause(0.01)
-                end
-                syncMAT=load(syncFrameMAT); nLastSync = syncMAT.nLast; % sync frame
-                n = nLastSync;
-                if fdbck.syncHere
-                    if btnSync == -1 % reset sync
-                        fdbck.syncWait = 0;
-                        fdbck.syncHere = 0;
-                    end
-                else
-                    fdbck.syncHere=1; 
-                end
-            elseif btnSync >= 0 && btnStart==1
-                fdbck.syncWait = 1;
-            end    
-            fdbck.nFrst = n;
-            fdbck.nLast = n + waWin - 1;
-            
-            
-            fdbck.runProcess = 0;
-            if ~isempty(posFN) % newData
-                if fdbck.syncWait 
-                    if fdbck.syncHere % process update
-                        fdbck.runProcess = 1;
-                    end
-                else % process update
-                    fdbck.runProcess = 1; 
-                end
-            elseif fdbck.toutOn==0
-                if isempty(tout)
-                    tout = toc; % time wait
-                elseif toc-tout > timeOut % timeout 
-                    fdbck.toutOn = 1;
-                end
-            end
-            
-            if 0&& exist('tprm')
+            if isempty(posFN)
+                if isTlog, if wait == 0, time = toc; fprintf(fid,'wait for   n=%3i time=%6.03f\n',n,time); wait = 1; end; end
+                [fdbck] = funcFeedback(cfg.msgTXT,fdbck,fcall);
+                if fdbck.inStop, break;  end % STOP
+            else
+                if isTlog, time = toc; wait = 0; fprintf(fid,'updated    n=%3i time=%6.03f\n',n,time); end
+                break; % continue
+            end 
+            if exist('tprm')
                 save('rtTraCKerTraceTIME.mat','tprm','tloop','ffT'); 
                 if ~isCallOutside
                     TLOOP=[];
@@ -172,20 +108,7 @@ tprm0 = toc; % vvvvvvvvvvvvvvvvvvvvvvvvv
                     return;
                 end
             end
-            [fdbck] = funcFeedback(cfg,fdbck,fcall);
-            if fdbck.runProcess % process new data
-                if isTlog, wait = 0; time = toc; fprintf(fid,'updated    n=%3i time=%6.03f\n',n,time); end
-                clck = clock;                 
-                break; 
-            else % wait
-                if isTlog, if wait == 0, time = toc; fprintf(fid,'wait for   n=%3i time=%6.03f\n',n,time);wait = 1;end; end
-            end 
-            pause(tloopPause)
-        end
-        if isStop
-            if exist('fid'), fclose(fid);end
-            lmpState = -1; save(MATrtTraCKerTrace,'lmpState','-append'); % stop
-            break;
+            %pause(0.010)
         end
         posfn = posFN.name;
         
@@ -196,29 +119,29 @@ tprm0 = toc; % vvvvvvvvvvvvvvvvvvvvvvvvv
         INT = [INT INTC];
         npos = numel(XC); % # of localizations
         
-        snc = rem(n,3); % prime number set number (current)
-        snp = rem(n-1,3); % prime number set number (previous)
-        sng = rem(n-2,3); % prime number set number (gap: 2frm before)
+        snc = rem(n,3); % multiplier number set number (current)
+        snp = rem(n-1,3); % multiplier number set number (previous)
+        sng = rem(n-2,3); % multiplier number set number (gap: 2frm before)
         if snc==0,snc=3;elseif snp==0,snp=3;else,sng=3;end
 tprm2 = toc;
 tprm(n,5) = tprm2-tprm0;
         
 tprm0 = toc;% vvvvvvvvvvvvvvvvvvvvvvvvv
-        pnImg = genPrimeNumImg(YC,XC,szYX,pns,snc,wsz,npos);
-        pnIMG(:,:,1) = pnImg;
-        pnIMG1 = pnIMG(:,:,1);
-        %pnIMG1 = abs(pnIMG(:,:,2));
-        uniqImg = unique(pnIMG1(~isnan(pnIMG1(:))));
-        uprm = isprime(uniqImg);
-        uprm(uprm>pns(snc,numel(YC)))=0;
+        mnImg = genMultiplierNumImg(YC,XC,szYX,mns,snc,wsz,npos);
+        mnIMG(:,:,1) = mnImg;
+        mnIMG1 = mnIMG(:,:,1);
+        %pnIMG1 = abs(mnIMG(:,:,2));
+        uniqImg = unique(mnIMG1(~isnan(mnIMG1(:))));
+        umul = (mNlim(snc) < uniqImg) .* (uniqImg <= mNlim(snc+1));
+        %umul(umul>mns(snc,numel(YC)))=0;
         
-        nt1 = sum(uprm);
+        nt1 = sum(umul);
         ixtc = nan(1,nt1); % trace indices in the current frame
 tprm2 = toc;
 tprm(n,4) = tprm2-tprm0;
         
         if 0         
-            pnIMG2 = abs(pnIMG(:,:,2));
+            pnIMG2 = abs(mnIMG(:,:,2));
             prms = unique(pnIMG2(~isnan(pnIMG2)));
             mxPrm = max(prms(isprime(prms)));
             nt2 = sum(isprime(prms));
@@ -228,49 +151,53 @@ tprm(n,4) = tprm2-tprm0;
             n = 2; 
             XP = XC; YP = YC;
             ixtp = ixtc;
-            pnIMG = circshift(pnIMG,[0 0 1]);
+            mnIMG = circshift(mnIMG,[0 0 1]);
             continue; 
         end
 
 tprm0 = toc; % vvvvvvvvvvvvvvvvvvvvvvvvv        
         %% 1: check prev frame
-        pnMATCH = pnIMG(:,:,1).*pnIMG(:,:,2); 
-        pnMatch = unique(pnMATCH(~isnan(pnMATCH)))';
-        nm = numel(pnMatch); % # of matchings
+        mnMATCH = mnIMG(:,:,1).*mnIMG(:,:,2); 
+        mnMatch = unique(mnMATCH(~isnan(mnMATCH)))';
+        nm = numel(mnMatch); % # of matchings
         
-        pns1 = pns(snc,:)';
-        %PNS1 = repmat(pns1,1,nm);
-        pns2 = pns(snp,:);
-        pnsMulc = pnsMul(snp,:); % current multiple set
+        mns1 = mns(snc,:)';
+        %PNS1 = repmat(mns1,1,nm);
+        mns2 = mns(snp,:);
+        mnsMulc = mnsMul(snp,:); % current multiple set
         
-        %FCT = factorFast1(abs(pnMatch),PNS1,pns2);
-        [FCT,mv] = factorFast1(abs(pnMatch),pns1,pns2,pnsMulc); % mv: match vector
+        %FCT = factorFast1(abs(mnMatch),PNS1,mns2);
+        [FCT,mv] = factorFast1(abs(mnMatch),mns1,mns2,mnsMulc); % mv: match vector
         nt = size(FCT,2);
 tprm2 = toc;
 tprm(n,1) = tprm2-tprm0;
         
         
         if 0 
-            pnIMG2 = pnIMG(:,:,2);
+            pnIMG2 = mnIMG(:,:,2);
             nt2 = sum(isprime(unique(pnIMG2(~isnan(pnIMG2)))));
-            figure(11); imagesc(pnIMG(:,:,1)); figure(12); imagesc(pnIMG(:,:,2)); 
+            figure(11); imagesc(mnIMG(:,:,1)); figure(12); imagesc(mnIMG(:,:,2)); 
         end
         xcrC = []; ycrC = [];
         xcrP = []; ycrP = [];
 tprm01 = toc;% vvvvvvvvvvvvvvvvvvvvvvvvv
         for i = 1:nt % each trace
             mix = mv(i);
-            %fct = factor(abs(pnMatch(i)));
-            %fct = factorFast(abs(pnMatch(i)),pns(snc,:),pns(snp,:));
+            %fct = factor(abs(mnMatch(i)));
+            %fct = factorFast(abs(mnMatch(i)),mns(snc,:),mns(snp,:));
             [fixc,fixp] = getFix(n,'c','p');
-            ixc = find(FCT(fixc,i) == pns(snc,:)); % index to XC YC arrays
-            ixp = find(FCT(fixp,i) == pns(snp,:)); % index to XP YP arrays
+            ixc = find(FCT(fixc,i) == mns(snc,:)); % index to XC YC arrays
+            ixp = find(FCT(fixp,i) == mns(snp,:)); % index to XP YP arrays
             
             xcrC = [xcrC XC(ixc)]; % mark in the image
             ycrC = [ycrC YC(ixc)];
 
             %tix_ = find(ismember(ixtp,ixp)); % check traces in prev frame
-            tix = ixtp(ixp); % check traces in prev frame
+            try
+                tix = ixtp(ixp); % check traces in prev frame
+            catch ME
+                ccc=2;
+            end
             if  ~isnan(tix) % add to the trace
                 %tix = ixtp(tix_);
 
@@ -282,7 +209,7 @@ tprm01 = toc;% vvvvvvvvvvvvvvvvvvvvvvvvv
     
                 ixtc(ixc) = tix; % index to TraceX 
                 ixtp(ixtp==tix)=nan;
-            elseif pnMatch(mix)>0 % new trace
+            elseif mnMatch(mix)>0 % new trace
                 tracex = [XP(ixp) XC(ixc)];
                 tracey = [YP(ixp) YC(ixc)];
                 TraceX{end+1} = tracex;
@@ -301,8 +228,8 @@ tprm(n,2) = tprm02-tprm01;
 
 tprm01 = toc;% vvvvvvvvvvvvvvvvvvvvvvvvv
         % mark in the image
-        pnIMG(:,:,1) = pnIMGremoveLocalization(pnIMG(:,:,1),xcrC,ycrC,wsz);
-        pnIMG(:,:,2) = pnIMGremoveLocalization(pnIMG(:,:,2),xcrP,ycrP,wsz);
+        mnIMG(:,:,1) = pnIMGremoveLocalization(mnIMG(:,:,1),xcrC,ycrC,wsz);
+        mnIMG(:,:,2) = pnIMGremoveLocalization(mnIMG(:,:,2),xcrP,ycrP,wsz);
 tprm02 = toc;
 tprm(n,3) = tprm02-tprm01;
         
@@ -313,7 +240,7 @@ tprm(n,3) = tprm02-tprm01;
             XP = XC; YP = YC;
             ixtg = ixtp;
             ixtp = ixtc;
-            pnIMG = circshift(pnIMG,[0 0 1]);
+            mnIMG = circshift(mnIMG,[0 0 1]);
 tsave0 = toc;
             save(traceDataFileNm,'TraceX','TraceY','trInf')
 tsave2 = toc;
@@ -324,31 +251,31 @@ tprm(n,6) = tsave2-tsave0;
         isgap =0;
         if isgap
 
-            pnIMGr = pnIMG(:,:,1); % remaining
+            pnIMGr = mnIMG(:,:,1); % remaining
             pnIMGr(pnIMGr<0)=0;
-            pnMATCH = pnIMGr.*pnIMG(:,:,3); 
-            pnMatch = unique(pnMATCH(~isnan(pnMATCH)))';
-            nm = numel(pnMatch);
+            mnMATCH = pnIMGr.*mnIMG(:,:,3); 
+            mnMatch = unique(mnMATCH(~isnan(mnMATCH)))';
+            nm = numel(mnMatch);
             mv = 1:nm; % match vector
 
-            pns1 = pns(snc,:)';
-            PNS1 = repmat(pns1,1,nm);
-            pns2 = pns(sng,:);
+            mns1 = mns(snc,:)';
+            PNS1 = repmat(mns1,1,nm);
+            mns2 = mns(sng,:);
 
 
-            FCT = factorFast2(abs(pnMatch),PNS1,pns2);
+            FCT = factorFast2(abs(mnMatch),PNS1,mns2);
             nt = size(FCT,2);
 
             xcrC = []; ycrC = [];
             xcrG = []; ycrG = [];
             for i = 1:nt % each trace
                 mix = mv(i);
-                if pnMatch(mix) == 0, continue;end % no matching with prev frame
-                %fct = factor(abs(pnMatch(i)));
-                %fct = factorFast(abs(pnMatch(i)),pns(snc,:),pns(sng,:));
+                if mnMatch(mix) == 0, continue;end % no matching with prev frame
+                %fct = factor(abs(mnMatch(i)));
+                %fct = factorFast(abs(mnMatch(i)),mns(snc,:),mns(sng,:));
                 [fixc,fixg] = getFix(n,'c','g');
-                ixc = find(FCT(fixc,i) == pns(snc,:)); % index to XC YC arrays
-                ixg = find(FCT(fixg,i) == pns(sng,:)); % index to XP YP arrays
+                ixc = find(FCT(fixc,i) == mns(snc,:)); % index to XC YC arrays
+                ixg = find(FCT(fixg,i) == mns(sng,:)); % index to XP YP arrays
 
                 xcrC = [xcrC XC(ixc)]; % mark in the image
                 ycrC = [ycrC YC(ixc)];
@@ -365,7 +292,7 @@ tprm(n,6) = tsave2-tsave0;
                     trInf(tix,2) = trInf(tix,2)+2; % num frames
                     ixtc(ixc) = tix; % index to TraceX 
                     ixtg(ixtg==tix)=nan;
-                elseif pnMatch(mix)>0 % new trace
+                elseif mnMatch(mix)>0 % new trace
                     xg = (XG(ixg)+XC(ixc))/2;
                     yg = (YG(ixg)+YC(ixc))/2;
                     tracex = [XG(ixg) xg XC(ixc)];
@@ -381,12 +308,12 @@ tprm(n,6) = tsave2-tsave0;
                 end
             end
             % mark in the image
-            pnIMG(:,:,1) = pnIMGremoveLocalization(pnIMG(:,:,1),xcrC,ycrC,wsz);
-            pnIMG(:,:,3) = pnIMGremoveLocalization(pnIMG(:,:,3),xcrG,ycrG,wsz);
+            mnIMG(:,:,1) = pnIMGremoveLocalization(mnIMG(:,:,1),xcrC,ycrC,wsz);
+            mnIMG(:,:,3) = pnIMGremoveLocalization(mnIMG(:,:,3),xcrG,ycrG,wsz);
         end
         
         
-        pnIMG = circshift(pnIMG,[0 0 1]);
+        mnIMG = circshift(mnIMG,[0 0 1]);
         XG = XP; YG = YP; 
         XP = XC; YP = YC; 
         ixtg = ixtp; 
@@ -402,23 +329,24 @@ tsave(n) = tsave2-tsave0;
            
     % ====================================================================
 
-    function [FCT,nix] = factorFast1(num,pns1,pns2,pnms)
+    function [FCT,nix] = factorFast1(num,mns1,mns2,mnms)
 ffT1 = toc;
-        % pnms: prime number multiple set
+        % mnms: multiplier number multiple set
         if num(1)==0,num(1)=[];end
-        pnms2D = reshape(pnms,np,np);
+        mnms2D = reshape(mnms,np,np);
 ffT12 = toc;
-        %[ism,numix] = ismember(pnms2D,num);
-        [~,pix,nix] = intersect(pnms2D,num);
+        %[ism,numix] = ismember(mnms2D,num);
+        [~,pix,nix] = intersect(mnms2D,num);
+        %[pix2,nix2] = fastintersect(mnms2D,num);
 ffT13 = toc;
 ffT(n,2) = ffT13-ffT12;
         %numix = unique(sparse(numix));
         %if numix(1)==0,numix(1)=[];end
         %[iy_, ix_] = find(ism);
-        [iy, ix] = ind2sub(size(pnms2D),pix);
-        %[FCTix1, numIx] = find(ismember(num./pnms));
-        FCT(1,:) = pns2(iy);
-        FCT(2,:) = pns1(ix);
+        [iy, ix] = ind2sub(size(mnms2D),pix);
+        %[FCTix1, numIx] = find(ismember(num./mnms));
+        FCT(1,:) = mns2(iy);
+        FCT(2,:) = mns1(ix);
         FCT = sort(FCT);
         %ixr = FCT(1,:).*FCT(2,:) == num(numIx); FCT = FCT(:,ixr);
         %[(FCT(1,:).*FCT(2,:))'-num(1:28)']
@@ -441,41 +369,33 @@ ffT(n,1) = ffT2-ffT1;
        
     end
 
-    function FCT = factorFast2(num,pns1,pns2)
+    function FCT = factorFast2(num,mns1,mns2)
     end
 
     
-    function pnImg = genPrimeNumImg(YC,XC,szYX,pns,snc,wsz,npos)
-        %  -- > pnImg
+    function [mns,mnsMul] = genMultiplierNumSet(mNlim)
+        % set 1
+        mns(1,:) = mNlim(1)+1:mNlim(1)+np;
+        % set 2
+        mns(2,:) = mNlim(2)+1:mNlim(2)+np;
+        % set 3
+        mns(3,:) = mNlim(3)+1:mNlim(3)+np;
+        
+        pns12 = mns(1,:)' * mns(2,:);
+        mnsMul = pns12(:)'; clear pns12;
+        pns23 = mns(2,:)' * mns(3,:);
+        mnsMul(2,:) = pns23(:)'; clear pns23;
+        pns31 = mns(3,:)' * mns(1,:);
+        mnsMul(3,:) = pns31(:)'; clear pns31;
+    end
+    
+    function mnImg = genMultiplierNumImg(YC,XC,szYX,mns,snc,wsz,npos)
+        %  -- > mnImg
         %sn: set number
         % max np localizations in a frame
         smMap = zeros(szYX,'double');
-        smMap(sub2ind(szYX,ceil(YC),ceil(XC))) = pns(snc,1:npos);
-        pnImg = double(conv2(smMap,ones(wsz,'double'),'same'));
-    end
-    
-    function [pns,pnsMul] = genPrimeNumSet(pNlim)
-        pn_0 = primes(pNlim(1));
-        
-        % set 1
-        npn_0 = numel(pn_0);
-        pn_1 = primes(pNlim(2));
-        pns(1,:) = pn_1(npn_0+1:npn_0+np);
-        % set 2
-        npn_1 = numel(pn_1);
-        pn_2 = primes(pNlim(3));
-        pns(2,:) = pn_2(npn_1+1:npn_1+np);
-        % set 3
-        npn_2 = numel(pn_2);
-        pn_3 = primes(pNlim(4));
-        pns(3,:) = pn_3(npn_2+1:npn_2+np);
-        
-        pns12 = pns(1,:)' * pns(2,:);
-        pnsMul = pns12(:)'; clear pns12;
-        pns23 = pns(2,:)' * pns(3,:);
-        pnsMul(2,:) = pns23(:)'; clear pns23;
-        pns31 = pns(3,:)' * pns(1,:);
-        pnsMul(3,:) = pns31(:)'; clear pns31;
+        smMap(sub2ind(szYX,ceil(YC),ceil(XC))) = mns(snc,1:npos);
+        mnImg = double(conv2(smMap,ones(wsz,'double'),'same'));
     end
 
     function pnIMGr = pnIMGremoveLocalization(pnIMGr,yc,xc,wsz)
@@ -535,15 +455,15 @@ ffT(n,1) = ffT2-ffT1;
 
 
 
-    function FCT = factorFastOld(num,pns1,pns2)
-        [FCTix1, numIx] = find(ismember(num./pns1,pns2));
-        FCT(1,:) = pns1(FCTix1,1);
+    function FCT = factorFastOld(num,mns1,mns2)
+        [FCTix1, numIx] = find(ismember(num./mns1,mns2));
+        FCT(1,:) = mns1(FCTix1,1);
         FCT(2,:) = num(numIx)./FCT(1,:);
         %ixr = FCT(1,:).*FCT(2,:) == num(numIx); FCT = FCT(:,ixr);
         FCT = sort(FCT);
     end
 
-    function FCT = factorFast1cuda(num,pns1,pns2,pnms)
+    function FCT = factorFast1cuda(num,mns1,mns2,pnms)
         % pnms: prime number multiple set
         pnms2D = reshape(pnms,np,np);
         try
@@ -562,8 +482,8 @@ ffT(n,1) = ffT2-ffT1;
           
         %[iy, ix] = find(ism);
         %[FCTix1, numIx] = find(ismember(num./pnms));
-        FCT(1,:) = pns2(iy);
-        FCT(2,:) = pns1(ix);
+        FCT(1,:) = mns2(iy);
+        FCT(2,:) = mns1(ix);
         FCT = sort(FCT);
         %ixr = FCT(1,:).*FCT(2,:) == num(numIx); FCT = FCT(:,ixr);
     end
@@ -591,7 +511,7 @@ ffT(n,1) = ffT2-ffT1;
     end
     
 
-    function [FCT,numix] = factorFast1ismember(num,pns1,pns2,pnms)
+    function [FCT,numix] = factorFast1ismember(num,mns1,mns2,pnms)
 ffT1 = toc;
         % pnms: prime number multiple set
         if num(1)==0,num(1)=[];end
@@ -605,8 +525,8 @@ ffT(n,2) = ffT13-ffT12;
         if numix(1)==0,numix(1)=[];end
         [iy, ix] = find(ism);
         %[FCTix1, numIx] = find(ismember(num./pnms));
-        FCT(1,:) = pns2(iy);
-        FCT(2,:) = pns1(ix);
+        FCT(1,:) = mns2(iy);
+        FCT(2,:) = mns1(ix);
         FCT = sort(FCT);
         %ixr = FCT(1,:).*FCT(2,:) == num(numIx); FCT = FCT(:,ixr);
         %[(FCT(1,:).*FCT(2,:))'-num(1:28)']
