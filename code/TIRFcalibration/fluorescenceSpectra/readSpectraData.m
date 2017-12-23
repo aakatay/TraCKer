@@ -13,6 +13,9 @@ fcEx = reshape(fcEx,2,numel(fcEx)/2)';
 fcEm = reshape(fcEm,2,numel(fcEm)/2)';
 fcBs = reshape(fcBs,2,numel(fcBs)/2)';
 save('fcPRB','fcEx','fcEm','fcBs');
+% CSU
+fqm1 = [fcBs(:,1) fcBs(:,2)*0+1]; % none
+save('fqPRB','fqm1');
 
 %% FISHEL LAB (BRT)
 fnB = 'semrockDi03-R405-488-532-635-t1-25x36.txt';
@@ -37,6 +40,7 @@ fqm2 = reshape(fqm2,2,numel(fqm2)/2)';
 fqm3 = readSpectra('QVm3_690-50chroma.txt');
 fqm3 = reshape(fqm3,2,numel(fqm3)/2)';
 save('fqBRT','fqd1','fqd2','fqd3','fqm1','fqm2','fqm3');
+
 
 
 

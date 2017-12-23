@@ -81,10 +81,10 @@ function [mnmx] = dispFluorescenceSpectra(varargin)
     % (fqd) quadview/CSU
     subplot(3,1,2)
     
-    minfqdX = 0;
-    maxfqdX = 10000;
-    if isfield(fqd,'X') % Quadview only
+    isfield(fqd,'X
         hold on
+        minfqdX = 0;
+        maxfqdX = 10000;
         for i = 1:numel(fqd.X) 
             if isInterp
                 ix =  find((mx >= fqd.X{i}) .* (fqd.X{i}>=mn));
@@ -101,7 +101,6 @@ function [mnmx] = dispFluorescenceSpectra(varargin)
             area(fqd.X{i},fqd.D{i},'FaceColor',colFQD,'FaceAlpha',FaceAlphaVal,'EdgeAlpha',EdgeAlphaVal);
         end
         hold off
-    end
     
     % (fqm) quadview/CSU
     subplot(3,1,3)

@@ -97,13 +97,13 @@ if isBRT % quadview
     chls = reshape(sum(CHL2D,1),[3,3]); %[ch x ls]
     CHF2D = reshape(CHF,[n, 9]);
     chfl = reshape(sum(CHF2D,1),[3,3]); %[ch x fl]
-else % PRB: CSU    (only one view channel)
+else % PRB: CSU    
     % (L) Laser transmission
-    CH1X = [P      fcD{1}      1-fcD{3}    fcD{2}    fqm.D{1}]; % CH1
-          %[x0     xFX           xFD       XFM       xFMq1   ];
+    CH1X = [P      fcD{1}      1-fcD{3}    fcD{2}    fqm.D{1}        fqm.D{2}*0+1    fqm.D{3}*0+1]; % CH1
+          %[x0     xFX           xFD       XFM         xFDq1           xFDq2           xFDq3           xFMq1           xFMq2           xFMq3];
     % (F) fluo emission transmission
-    CH1M = [P      fcD{1}*0+1    fcD{3}    fcD{2}    fqm.D{1}]; % CH1
-          %[m0     xFX           xFD       XFM       xFMq1   ];    
+    CH1M = [P      fcD{1}*0+1    fcD{3}    fcD{2}    1-fqd.D{1}        fqd.D{2}*0+1    fqd.D{3}*0+1    fqm.D{1}        fqm.D{2}*0+1    fqm.D{3}*0+1]; % CH1
+          %[m0     xFX           xFD       XFM         xFDq1           xFDq2           xFDq3           xFMq1           xFMq2           xFMq3];    
           
     ch1x = cumprod(CH1X,2);
     ch1m = cumprod(CH1M,2);
@@ -119,6 +119,8 @@ else % PRB: CSU    (only one view channel)
     chls = sum(CHL,1); %[ch x ls]
     chfl = sum(CHF,1); %[ch x fl]
     
+    chls
+    chfl
 end
 
 

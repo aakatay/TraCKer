@@ -1,6 +1,6 @@
 clear all;
 close all;
-isBRT = 1; % ow PRB
+isBRT = 0; % ow PRB
 isCy3 = 1; % ow. GFP
 %% display param
 disp.FaceAlphaVal = 0.2;
@@ -9,12 +9,11 @@ disp.EdgeAlphaVal = 0.7;
 sysBRT.fluoCollect = 0.3; % NA=
 sysPRB.fluoCollect = 0.35; % NA=
 
-fcBRT = 'spectrumData\fcBRT.mat';
 fcPRB = 'spectrumData\fcPRB.mat';
 flCY3 = 'spectrumData\flCY.mat';
 flGFP = 'spectrumData\flGFP.mat';
 fqBRT = 'spectrumData\fqBRT.mat';
-fqPRB = 'spectrumData\fqPRB.mat';
+fcBRT = 'spectrumData\fcBRT.mat';
 lsPRB = [488 561 640];
 lsBRT = [473 532 635];
 %% load Data
@@ -71,12 +70,11 @@ else % CSU
     % fqm
     fqm.X{1} = fqm1(:,1); % spectra (x-axis)
     fqm.D{1} = fqm1(:,2); % values (y-axis) 
-    fq.fqm = fqm; fq.fqd = [];
     
 end
 
-[mnmx] = dispFluorescenceSpectra(fc,fq,fl,ls,disp,isBRT,isCy3);
+[mnmx] = dispFluorescenceSpectra(fc,fq,fl,ls,isBRT,isCy3,disp);
 
-dispFluorescenceSpectra(fc,fq,fl,ls,disp,isBRT,isCy3,mnmx);
+dispFluorescenceSpectra(fc,fq,fl,ls,disp,mnmx,isBRT,isCy3);
 
 dispChanIntensity

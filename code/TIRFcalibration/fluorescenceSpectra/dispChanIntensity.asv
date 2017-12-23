@@ -3,25 +3,6 @@
 close all;
 load('channelIntensity'); % 'chls','chfl','flx'
 
-% output
-imgFout = 'SNRchannelLaserFluo.tif';
-MAToutFN  = 'SNRchannelLaserFluo.mat';
-if isBRT
-    imgFout = ['BRT-' imgFout];
-    MAToutFN = ['BRT-' MAToutFN];
-else
-    imgFout = ['PRB-' imgFout];
-    MAToutFN = ['PRB-' MAToutFN];
-end
-   
-if isCy3
-    imgFout = ['CY3-' imgFout];
-    MAToutFN = ['CY3-' MAToutFN];
-else
-    imgFout = ['GFP-' imgFout];
-    MAToutFN = ['GFP-' MAToutFN];
-end 
-
 % no 4th laser and 4th fluo
 chls4by4 = nan(4);
 chfl4by4 = nan(4);
@@ -58,7 +39,7 @@ am = a*1i;
 ax = a*1i;
 
 % 
-G=imread('spectrumData\channelLaserFluoGRID.tif');
+G=imread('spectrumData\channelLaserFluoGRID.PNG');
 figure(62);imagesc(G); axis image;
 
 
@@ -88,33 +69,25 @@ for i = 1:nCH % channels
         colormap('gray')
         cc=1;
     end
+    
 end
 %% display
 % each combination (leaks)
-A = real(A);
-ax = real(ax);
-am = real(am);
 figure(63)
 mxA = max(A(:));
 A(A==-1)=mxA;
 A(128:130,:)=mxA/1.5;
 A(:,127:129)=mxA/1.5;
-imagesc(A); axis image
+imagesc(real(A)); axis image
 colormap('gray')
 
 %% save 
-        
-if exist(imgFout),delete(imgFout); end;
-figure(63)
-imgFig = getframe(gcf);
-imgOut = imgFig.cdata;
-imwrite(imgOut,imgFout,'WriteMode','append','Compression', 'none') 
-figure(62)
-imgFig = getframe(gcf);
-imgOut = imgFig.cdata;
-imwrite(imgOut,imgFout,'WriteMode','append','Compression', 'none') 
+imgFout = ''
+        imgFig = getframe(gcf);
+        imgOut = imgFig.cdata;
+        imwrite(imgOut,imgFout,'WriteMode','append','Compression', 'none') 
 
-save(MAToutFN,'am','ax','A');
+
 if 0
     % sort flx
     a=[4 3; 1 2];
