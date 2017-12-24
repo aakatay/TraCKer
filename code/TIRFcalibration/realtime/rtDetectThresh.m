@@ -113,6 +113,7 @@ function rtDetectThresh(varargin)
                     fdbck.toutOn = 0;
                 else
                     continue;
+                    if isTlog, if wait == 0, time = toc; fprintf(fid,'timeout@   n=%3i time=%6.03f\n',n,time);wait = 1;end; end
                 end
             elseif fdbck.toutOn == -1
                 if fdbck.runProcess % reset timeout
@@ -150,9 +151,10 @@ function rtDetectThresh(varargin)
                 else % process update
                     fdbck.runProcess = 1; 
                 end
+                tout = toc; % reset timeout time
             elseif fdbck.toutOn==0
                 if isempty(tout)
-                    tout = toc; % time wait
+                    tout = toc; % reset timeout time
                 elseif toc-tout > timeOut % timeout 
                     fdbck.toutOn = 1;
                 end

@@ -14,7 +14,7 @@ function rtTrackSNR(varargin)
         pause(1);
         while q == 0
             try 
-                cd waSeq\tracker\rtData
+                %cd waSeq\tracker\rtData
                 q = 1;
             catch
                 q=0;
@@ -24,7 +24,7 @@ function rtTrackSNR(varargin)
         end
     else
         %% load cfgRT
-        cfg = '..\..\..\cfgRT';
+        cfg = 'cfgRT';
         c_=load(cfg);
         cfg = c_.cfgSave;
     end
@@ -70,27 +70,29 @@ function rtTrackSNR(varargin)
     SNRmovVoronoi = zeros([szYXmag 3]);
     
     %% input files
-    traceFN = 'traceData_';
-    fn_ = load('..\..\..\fname0'); % filename_WA_
+    traceFN = 'waSeq\tracker\rtData\traceData_';
+    fn_ = load('fname0'); % filename_WA_
     fname = fn_.fname0;
-    fname = ['..\..\..\acq\' fname];   
+    fname = ['acq\' fname];   
     
     if isdbgAcquisition
-        inputDIR = '..\..\..\input\';
+        inputDIR = 'input\';
         inputFN_ = dir([inputDIR '*.tif']);
-        inputFN = ['..\..\..\input\' inputFN_(1).name];
+        inputFN = ['input\' inputFN_(1).name];
         inputIx = 2;
         clckAcqTime0 = 0;
+        clckPauseTime0 = 0;
+        ixPause = 60; % pause at frame _
     end
         
     if isCallOutside
         %% Communication variables
         % MAT files assoc. to parallel workers
-        MATrtWAmean         = '..\..\..\signals\MATrtWAmean.mat';
-        MATrtDetectThresh   = '..\..\..\signals\MATrtDetectThresh.mat';
-        MATrtTraCKerPos     = '..\..\..\signals\MATrtTraCKerPos.mat';
-        MATrtTraCKerTrace   = '..\..\..\signals\MATrtTraCKerTrace.mat';
-        MATrtTrackSNR       = '..\..\..\signals\MATrtTrackSNR.mat';
+        MATrtWAmean         = 'signals\MATrtWAmean.mat';
+        MATrtDetectThresh   = 'signals\MATrtDetectThresh.mat';
+        MATrtTraCKerPos     = 'signals\MATrtTraCKerPos.mat';
+        MATrtTraCKerTrace   = 'signals\MATrtTraCKerTrace.mat';
+        MATrtTrackSNR       = 'signals\MATrtTrackSNR.mat';
         MATcell = {MATrtWAmean,MATrtDetectThresh,MATrtTraCKerPos,MATrtTraCKerTrace,MATrtTrackSNR};
         lmp1 = cfg.lmps{1}; % rtWAmean
         lmp2 = cfg.lmps{2}; % rtDetectThresh
@@ -110,17 +112,18 @@ function rtTrackSNR(varargin)
         btnCol = [cfg.btnColDefault;cfg.btnColPress;cfg.btnColActive];
         
         isQuit = [];
+        lmp = [];
         i = [];
     end
     %% output files
-    SNRmovieFN          = '..\..\..\snapSaveOUT\SNRmovie.tif';
-    SNRmovieConvFN      = '..\..\..\snapSaveOUT\SNRmovieConv.tif';
-    SNRmovieVoronoiFN0  = '..\..\..\snapSaveOUT\SNRmovieVoronoi'; % .tif label
+    SNRmovieFN          = 'snapSaveOUT\SNRmovie.tif';
+    SNRmovieConvFN      = 'snapSaveOUT\SNRmovieConv.tif';
+    SNRmovieVoronoiFN0  = 'snapSaveOUT\SNRmovieVoronoi'; % .tif label
     SNRmovieVoronoiFN   = [];
-    lensConfigFN0       = '..\..\..\snapSaveOUT\lensConfig'; % .txt label
-    SNRplotFN           = '..\..\..\snapSaveOUT\SNRplot.tif';
-    numSMplotFN         = '..\..\..\snapSaveOUT\SNRnumSMplot.tif';
-    snrSTDplotFN        = '..\..\..\snapSaveOUT\SNRstdplot.tif';
+    lensConfigFN0       = 'snapSaveOUT\lensConfig'; % .txt label
+    SNRplotFN           = 'snapSaveOUT\SNRplot.tif';
+    numSMplotFN         = 'snapSaveOUT\SNRnumSMplot.tif';
+    snrSTDplotFN        = 'snapSaveOUT\SNRstdplot.tif';
     %SNRdataFN = 'SNRdata.mat';
     
     %% SNR image figure
@@ -166,9 +169,9 @@ function rtTrackSNR(varargin)
     
     %% feedback to calling function
     fcall = 'rtTrackSNR';
-    btnMAT          = '..\..\..\signals\btnMAT.mat';
-    MATrtTraCKSNR   = '..\..\..\signals\MATrtTrackSNR.mat';
-    quitToutMAT     = '..\..\..\signals\quitTout.mat';
+    btnMAT          = 'signals\btnMAT.mat';
+    MATrtTraCKSNR   = 'signals\MATrtTrackSNR.mat';
+    quitToutMAT     = 'signals\quitTout.mat';
     
     % fdbck inputs to funcFeedback : 
     fdbck.nFrst         = 0;
@@ -225,7 +228,7 @@ function rtTrackSNR(varargin)
                 if isQuit 
                     break;
                 else % wait updateCommunication 
-                    continue; 
+                    ; 
                 end
             end
             if fdbck.toutOn == 1 % timeout
@@ -233,6 +236,7 @@ function rtTrackSNR(varargin)
                     fdbck.toutOn = -1;
                 else
                     continue;
+                    if isTlog, if wait == 0, time = toc; fprintf(fid,'timeout@   n=%3i time=%6.03f\n',n,time);wait = 1;end; end
                 end
             elseif fdbck.toutOn == -1
                 if fdbck.runProcess % reset timeout
@@ -260,10 +264,10 @@ function rtTrackSNR(varargin)
             end    
             
             if btnSnap == 0 || btnSave == 0 % snap/save
-                if (ssSnap || ssSave) && dispSS % reset snap/save
-                    ssSnap = 0; ssSave = 0;
-                elseif isSS == 0 && fdbck.syncHere == 1 % enter Snap/Save
-                    isSS = 1;
+                if (fdbck.ssSnap || fdbck.ssSave) && fdbck.dispSS % reset snap/save
+                    fdbck.ssSnap = 0; fdbck.ssSave = 0;
+                elseif fdbck.isSS == 0 && fdbck.syncHere == 1 % enter Snap/Save
+                    fdbck.isSS = 1;
                     if btnSnap == 0,fdbck.ssSnap = 1;elseif btnSave == 0,fdbck.ssSave = 1;end                
                     setSNRmovieVoronoiFN;
                 end
@@ -281,17 +285,18 @@ function rtTrackSNR(varargin)
                 else % process update
                     fdbck.runProcess = 1; 
                 end
-            elseif fdbck.toutOn==0
-                if isempty(tout)
+                tout = toc; % reset timeout time
+            elseif fdbck.toutOn==0 % default
+                if isempty(tout) % run timer
                     tout = toc; % time wait
-                elseif toc-tout > timeOut % timeout 
+                elseif toc-tout > timeOut*10 % timeout 
                     fdbck.toutOn = 1;
                 end
             end    
             
             [fdbck] = funcFeedback(cfg,fdbck,fcall);
             updateCommunication;
-            dbgAcquisition;
+            dbgAcquisition; % emulate camera acquisition
             if fdbck.runProcess % process new data
                 if isTlog, wait = 0; time = toc; fprintf(fid,'updated    n=%3i time=%6.03f\n',n,time); end
                 clck = clock;                 
@@ -313,13 +318,15 @@ function rtTrackSNR(varargin)
             twhile2 = toc; twhileDiff = tloopPause - (twhile2 - twhile1); pause(twhileDiff)
         end      
         if fdbck.isStop
-            if exist('fid'), fclose(fid);end
+            %if exist('fid'), fclose(fid);end
+            deleteALLparallelPools;
+            break;
         end
         n = n + 1;
         
         if 0 && n == 2 % pauses the rtWAmean to sync
             test = []; save test test
-            fopen('..\..\..\logData\syncSignal.txt','w');
+            fopen('logData\syncSignal.txt','w');
         end
 
         q=0;
@@ -522,9 +529,11 @@ function rtTrackSNR(varargin)
             
         end
         
+
+        
         if isContinue, continue; end
         
-        % SNR plot
+        % SNR bar plot
         figure(figSNRplot)
         nBars = 13;
         snrBarsDisp = snrMean;
@@ -542,9 +551,7 @@ function rtTrackSNR(varargin)
         xlim([xd1-0.5 xd2])
         ylim([0 10])
         xticks(xd1:xd1+nBars-1);
-        
-
-        if fdbck.isStop, break; end
+         
         
         continue
          
@@ -576,15 +583,28 @@ function rtTrackSNR(varargin)
 
     %% COMMUNICATION vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
     function dbgAcquisition
+        % emulate camera acquisition
         if ~isdbgAcquisition, return; end
         try
             IMGin = imread(inputFN,inputIx);
         catch
             isdbgAcquisition = 0; return;
         end
-        inputFN2  = sprintf('..\\..\\..\\acq\\%s_%04i.tif',inputFN(16:end-4),inputIx);
+        inputFN2  = sprintf('acq\\%s_%04i.tif',inputFN(7:end-4),inputIx);
         clckAcq = clock; clckAcqTime = clckAcq(4)*24+clckAcq(5)*60+clckAcq(6);
+        clckPause = clock; clckPauseTime = clckPause(4)*24+clckPause(5)*60+clckPause(6);
         if clckAcqTime - clckAcqTime0 > cfg.acqTime
+            if ixPause == inputIx % pause acq here
+                if ~clckPauseTime0
+                    clckPause = clock; 
+                    clckPauseTime0 = clckPause(4)*24+clckPause(5)*60+clckPause(6); % set pause timer
+                end
+                if clckPauseTime - clckPauseTime0 > 15 % [sec]
+                    ; % paus over continue process
+                else % wait
+                    return; 
+                end
+            end
             IMGin = imread(inputFN,inputIx);
             imwrite(IMGin,inputFN2);
             inputIx = inputIx + 1;
@@ -597,17 +617,13 @@ function rtTrackSNR(varargin)
             %btnSave = 1; save(btnMAT,'btnSave','-Append');
             %btnSnap = 1; save(btnMAT,'btnSnap','-Append');
 
-        while 1 % wait for startBtn
-            if isequal(get(btnStart0,'BackgroundColor'), cfg.btnColPress)
-                break; 
-            end
-            pause(0.1)
-        end
+        %if ~isequal(get(btnStart0,'BackgroundColor'), cfg.btnColPress), return;  end % wait for startBtn
+        if btnStart == -1, return; end % wait for startBtn
         checkStop; % if btnStop
         if isQuit, return; end
         for i = 1:5 % read inputs from five parallel workers
             matFN = MATcell{i};
-            matfn = tryLoad(sprintf('out=load(''%s'');',matFN),cfg.tTryLoop); % lmpState n
+            matfn = tryLoadMATfn(sprintf('out=load(''%s'');',matFN),cfg.tTryLoop); % lmpState n
 
             % update lamp displays
             lmp = cfg.lmps{i};
@@ -631,10 +647,10 @@ function rtTrackSNR(varargin)
         end
 
         % update button states
-        BTNcell = {btnStart,btnSync,btnSnap,btnSave,btnStop}; % variables
         if btnStart == 0 && n==1, btnStart=1; end % ready for start sync
+        BTNcell = {btnStart,btnSync,btnSnap,btnSave,btnStop}; % variables
         for j = 1:5 % read inputs from five button press
-            set(BTNcell0{j},'BackgroundColor', btnCol(BTNcell(j),:));
+            set(BTNcell0{j},'BackgroundColor', btnCol(BTNcell{j}+2,:));
         end
         
         

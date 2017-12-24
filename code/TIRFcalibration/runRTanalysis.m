@@ -54,7 +54,7 @@ isdbgAcquisition = 1;
     cfg.scrnSzIn = [1600 900];
     cfg.isTlog = 1; % keeps times in TXT files in logData\
     cfg.tloopPause = 0.01; % [sec]
-    cfg.timeOut = 7; % [sec]
+    cfg.timeOut = 10; % [sec]
     cfg.tTryLoop = 0.01;  % [sec]
     cfg.SnapNumFrames = 30;  % [frames]
     cfg.SaveNumFrames = 60;  % [frames]
@@ -145,6 +145,7 @@ isdbgAcquisition = 1;
 
     %% buttons
     fig= uifigure(1,'Position',[20 600 300 400]);
+    
 
     x1 = 20;
     dy = 30;
@@ -169,9 +170,10 @@ isdbgAcquisition = 1;
     y2 = y1(1);
     w2 = 120;
     h2 = y1(end)-y1(1);
+    hT1 = h1+h2-40;
     hp = uipanel('Parent',fig,'Title','lens config','FontSize',10,...
              'BackgroundColor','white','Units','Pixels',...
-             'Position',[x2 y2 w2 h1+h2]);
+             'Position',[x2 y2 w2 hT1]);
          
     w = 23;
 	dx = w+5;
@@ -195,6 +197,19 @@ isdbgAcquisition = 1;
     
     cfg.lensBox = [L1tilt L1shft L1dist L2tilt L2shft L2dist];
     cfgLens = [L1tilt.Value L1shft.Value L1dist.Value L2tilt.Value L2shft.Value L2dist.Value];
+    
+    %% TIRF angle
+    
+    dh = 90;
+    dxx = 10;
+    hp2 = uipanel('Parent',fig,'FontSize',10,...
+             'BackgroundColor','white','Units','Pixels',...
+             'Position',[x2 y2+hT1 w2 40]);
+         
+    labelt1 = uilabel(fig,'Position',[x3(1) y3(2)+dh w*2 h3],'Text','TIRFx');
+    labelt2 = uilabel(fig,'Position',[x3(1) y3(1)+dh+12 w*2 h3],'Text','ACQx');
+    TIRFx0 = uieditfield(fig,'numeric','Position',[x3(3)-10 y3(2)+dh w*2.5 h3]);
+    TIRFx = uieditfield(fig,'numeric','Position',[x3(3)-10 y3(1)+dh+12 w*2.5 h3]);
 
     %% lamps
     dxfn = 50; % frame num width

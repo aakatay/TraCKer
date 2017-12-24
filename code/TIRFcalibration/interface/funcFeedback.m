@@ -14,7 +14,7 @@ function [fdbck] = funcFeedback(cfg,fdbck,fcall)
     MATrtDetectThresh   = '..\signals\MATrtDetectThresh.mat';
     MATrtTraCKerPos     = '..\..\signals\MATrtTraCKerPos.mat';
     MATrtTraCKerTrace   = '..\..\signals\MATrtTraCKerTrace.mat';
-    MATrtTrackSNR       = '..\..\..\signals\MATrtTrackSNR.mat';
+    MATrtTrackSNR       = 'signals\MATrtTrackSNR.mat';
     
     %syncFrameMAT        = 'syncFrame.mat';2
     %quitToutMAT         = 'quitTout.mat';
@@ -41,7 +41,7 @@ function [fdbck] = funcFeedback(cfg,fdbck,fcall)
         funcIx = 4;
     elseif strcmp(fcall,'rtTrackSNR')
         matFN = MATrtTrackSNR; 
-        btnMAT = ['..\..\..\' btnMAT];
+        btnMAT = [btnMAT];
         funcIx = 5;
     end
     tloopPause = cfg.tloopPause;
@@ -67,20 +67,20 @@ function [fdbck] = funcFeedback(cfg,fdbck,fcall)
     %% snap/save
     if dispSS % display done quit Snap/Save
         inSS = 0; dispSS = 0;
-        if ssSnap
+        if fdbck.ssSnap
             btnSync = 0; save(btnMAT,'btnSync','-Append'); %pushSync
-        elseif ssSave
+        elseif fdbck.ssSave
             btnStop = 0; save(btnMAT,'btnStop','-Append'); %pushStop
         end 
         btnSnap = -1; save(btnMAT,'btnSnap','-append');  % snapping is inactive
         btnSave = -1; save(btnMAT,'btnSave','-append');  % saving is inactive
     elseif isSS
         if inSS == 0
-            if ssSnap, btnSnap = 1; save(btnMAT,'btnSnap','-append'); end % snapping is active
-            if ssSave, btnSave = 1; save(btnMAT,'btnSave','-append'); end % saving is active
+            if fdbck.ssSnap, btnSnap = 1; save(btnMAT,'btnSnap','-append'); end % snapping is active
+            if fdbck.ssSave, btnSave = 1; save(btnMAT,'btnSave','-append'); end % saving is active
         end 
         inSS = inSS + 1;
-        if inSS > cfg.SnapNumFrames*ssSnap + cfg.SaveNumFrames*ssSave % stop snapping
+        if inSS > cfg.SnapNumFrames*fdbck.ssSnap + cfg.SaveNumFrames*fdbck.ssSave % stop snapping
             isSS = 0;
             dispSS = 1;
         end
