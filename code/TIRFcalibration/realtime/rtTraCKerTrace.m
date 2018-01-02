@@ -70,6 +70,7 @@ function rtTraCKerTrace(varargin)
     btnMAT              = '..\..\signals\btnMAT.mat';
     MATrtTraCKerTrace   = '..\..\signals\MATrtTraCKerTrace.mat';
     quitToutMAT         = '..\..\signals\quitTout.mat';
+    syncFrameMAT        = '..\..\signals\syncFrame.mat';
     % fdbck inputs to funcFeedback : 
     fdbck.nFrst         = 0;
     fdbck.nLast         = 0;
@@ -88,6 +89,7 @@ function rtTraCKerTrace(varargin)
     %% loop
     ixSptFrm = 1; % first spot in the frame
     n = 1; % frame number
+    nt = 1; % tracking frame number
     ixTr = 1; % trace number
     X=[];Y=[];INT=[];
     TraceX={};TraceY={};
@@ -95,27 +97,28 @@ function rtTraCKerTrace(varargin)
     pnIMG = zeros([szYX dn+1],'double');
     isStop = 0;
     tout =[]; % timeout
+    syncFrameList = [];
     while (1)
 
 tprm0 = toc; % vvvvvvvvvvvvvvvvvvvvvvvvv
         if isTlog, time = toc; fprintf(fid,'while loop n=%3i time=%6.03f\n',n,time); end
-        %% output filename
-        digitTXT = eval(['sprintf(' digitFormat ',n)'] );
-        traceDataFileNm = [outDIR 'traceData_' label '_' digitTXT '.mat'];
         
         %% load data
         while (1) % wait for update
+            %% output filename
+            digitTXT = eval(['sprintf(' digitFormat ',n)'] );
+            traceDataFileNm = [outDIR 'traceData_' label '_' digitTXT '.mat'];
             tloop(n)=toc;
             posFN = rdir(['posData-coeff*_' label '_' digitTXT '.mat']);
 
-            b_=load(btnMAT); btnStart = b_.btnStart; btnSync = b_.btnSync; btnSnap = b_.btnSnap; btnSave = b_.btnSave; btnStop = b_.btnStop; 
+            b_=tryLoadbtnMAT(sprintf('out=load(''%s'');',btnMAT),cfg.tTryLoop); btnStart = b_.btnStart; btnSync = b_.btnSync; btnSnap = b_.btnSnap; btnSave = b_.btnSave; btnStop = b_.btnStop; 
             if btnStop >= 0
                 isStop = 1;
                 break;
             end
             if fdbck.toutOn == 1 % timeout
                 if exist(quitToutMAT) % quit timeout
-                    fdbck.toutOn = -1;
+                    fdbck.toutOn = 0;
                 else
                     continue;
                     if isTlog, if wait == 0, time = toc; fprintf(fid,'timeout@   n=%3i time=%6.03f\n',n,time);wait = 1;end; end
@@ -131,32 +134,33 @@ tprm0 = toc; % vvvvvvvvvvvvvvvvvvvvvvvvv
                 while ~exist(syncFrameMAT) % wait for sync data
                     pause(0.01)
                 end
-                syncMAT=load(syncFrameMAT); nLastSync = syncMAT.nLast; % sync frame
-                n = nLastSync;
                 if fdbck.syncHere
-                    if btnSync == -1 % reset sync
+                    if 1 || btnSync == -1 % reset sync
                         fdbck.syncWait = 0;
-                        fdbck.syncHere = 0;
                     end
                 else
+                    syncMAT=load(syncFrameMAT); nLastSync = syncMAT.nLast; % sync frame
+                    n = nLastSync;
+                    syncFrameList = [syncFrameList n];
                     fdbck.syncHere=1; 
                 end
-            elseif btnSync >= 0 && btnStart==1
-                fdbck.syncWait = 1;
+            elseif btnSync >= 0 && btnStart>=1 % check new sync
+                if exist(syncFrameMAT)
+                    syncMAT=load(syncFrameMAT); nLastSync = syncMAT.nLast; % sync frame
+                    if ~ismember(nLastSync,syncFrameList) % new sync
+                        fdbck.syncWait = 1;
+                    end
+                else % new sync
+                    fdbck.syncWait = 1;
+                end 
             end    
             fdbck.nFrst = n;
             fdbck.nLast = n + waWin - 1;
-            
-            
+                        
             fdbck.runProcess = 0;
             if ~isempty(posFN) % newData
-                if fdbck.syncWait 
-                    if fdbck.syncHere % process update
-                        fdbck.runProcess = 1;
-                    end
-                else % process update
-                    fdbck.runProcess = 1; 
-                end
+                if fdbck.syncHere, fdbck.syncHere = 0; end
+                fdbck.runProcess = 1; % process update
                 tout = toc; % reset timeout time
             elseif fdbck.toutOn==0
                 if isempty(tout)
@@ -198,9 +202,9 @@ tprm0 = toc; % vvvvvvvvvvvvvvvvvvvvvvvvv
         INT = [INT INTC];
         npos = numel(XC); % # of localizations
         
-        snc = rem(n,3); % prime number set number (current)
-        snp = rem(n-1,3); % prime number set number (previous)
-        sng = rem(n-2,3); % prime number set number (gap: 2frm before)
+        snc = rem(nt,3); % prime number set number (current)
+        snp = rem(nt-1,3); % prime number set number (previous)
+        sng = rem(nt-2,3); % prime number set number (gap: 2frm before)
         if snc==0,snc=3;elseif snp==0,snp=3;else,sng=3;end
 tprm2 = toc;
 tprm(n,5) = tprm2-tprm0;
@@ -226,8 +230,8 @@ tprm(n,4) = tprm2-tprm0;
             nt2 = sum(isprime(prms));
         end
         
-        if n == 1 % first frame only
-            n = 2; 
+        if nt == 1 % first frame only
+            nt = 2; 
             XP = XC; YP = YC;
             ixtp = ixtc;
             pnIMG = circshift(pnIMG,[0 0 1]);
@@ -247,7 +251,7 @@ tprm0 = toc; % vvvvvvvvvvvvvvvvvvvvvvvvv
         
         %FCT = factorFast1(abs(pnMatch),PNS1,pns2);
         [FCT,mv] = factorFast1(abs(pnMatch),pns1,pns2,pnsMulc); % mv: match vector
-        nt = size(FCT,2);
+        Nt = size(FCT,2);
 tprm2 = toc;
 tprm(n,1) = tprm2-tprm0;
         
@@ -260,11 +264,11 @@ tprm(n,1) = tprm2-tprm0;
         xcrC = []; ycrC = [];
         xcrP = []; ycrP = [];
 tprm01 = toc;% vvvvvvvvvvvvvvvvvvvvvvvvv
-        for i = 1:nt % each trace
+        for i = 1:Nt % each trace
             mix = mv(i);
             %fct = factor(abs(pnMatch(i)));
             %fct = factorFast(abs(pnMatch(i)),pns(snc,:),pns(snp,:));
-            [fixc,fixp] = getFix(n,'c','p');
+            [fixc,fixp] = getFix(nt,'c','p');
             ixc = find(FCT(fixc,i) == pns(snc,:)); % index to XC YC arrays
             ixp = find(FCT(fixp,i) == pns(snp,:)); % index to XP YP arrays
             
@@ -291,7 +295,7 @@ tprm01 = toc;% vvvvvvvvvvvvvvvvvvvvvvvvv
                 %checkTX(2)
                 
                 TraceY{end+1} = tracey;
-                trInf(end+1,1) = n-1; % frst frame
+                trInf(end+1,1) = nt-1; % frst frame
                 trInf(end,2) = 2; % num frames
                 ixtc(ixc) = numel(TraceX); % index to TraceX 
                 xcrP = [xcrP XP(ixp)]; % mark in the image
@@ -309,8 +313,9 @@ tprm02 = toc;
 tprm(n,3) = tprm02-tprm01;
         
         %% 2: check 2frm before (with a gap)
-        if n == 2 % second frame only
-            n = 3; 
+        if nt == 2 % second frame only
+            nt = 3; 
+            n = n + 1;
             XG = XP; YG = YP;
             XP = XC; YP = YC;
             ixtg = ixtp;
@@ -339,16 +344,16 @@ tprm(n,6) = tsave2-tsave0;
 
 
             FCT = factorFast2(abs(pnMatch),PNS1,pns2);
-            nt = size(FCT,2);
+            Nt = size(FCT,2);
 
             xcrC = []; ycrC = [];
             xcrG = []; ycrG = [];
-            for i = 1:nt % each trace
+            for i = 1:Nt % each trace
                 mix = mv(i);
                 if pnMatch(mix) == 0, continue;end % no matching with prev frame
                 %fct = factor(abs(pnMatch(i)));
                 %fct = factorFast(abs(pnMatch(i)),pns(snc,:),pns(sng,:));
-                [fixc,fixg] = getFix(n,'c','g');
+                [fixc,fixg] = getFix(nt,'c','g');
                 ixc = find(FCT(fixc,i) == pns(snc,:)); % index to XC YC arrays
                 ixg = find(FCT(fixg,i) == pns(sng,:)); % index to XP YP arrays
 
@@ -375,7 +380,7 @@ tprm(n,6) = tsave2-tsave0;
                     TraceX{end+1} = tracex;
                     %checkTX(2)
                     TraceY{end+1} = tracey;
-                    trInf(end+1,1) = n-2; % frst frame
+                    trInf(end+1,1) = nt-2; % frst frame
                     trInf(end,2) = 3; % num frames
                     ixtc(ixc) = numel(TraceX); % index to TraceX 
                     xcrG = [xcrG XG(ixg)]; % mark in the image
@@ -399,6 +404,7 @@ tsave0 = toc; % vvvvvvvvvvvvvvvvvvvvvvvvv
 tsave2 = toc;
 tsave(n) = tsave2-tsave0;
         n = n + 1;
+        nt = nt + 1;
         cc= 3;
     end
            

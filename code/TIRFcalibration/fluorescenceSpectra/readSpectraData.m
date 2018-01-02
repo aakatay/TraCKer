@@ -6,6 +6,7 @@
 fnX = '89101x.txt';
 fnM = '89101m.txt';
 fnB = '89100bs.txt';
+fq = 'semrockFF01-446-523-600-677-25.txt';
 fcEx = readSpectra(fnX);
 fcEm = readSpectra(fnM);
 fcBs = readSpectra(fnB); 
@@ -14,7 +15,10 @@ fcEm = reshape(fcEm,2,numel(fcEm)/2)';
 fcBs = reshape(fcBs,2,numel(fcBs)/2)';
 save('fcPRB','fcEx','fcEm','fcBs');
 % CSU
-fqm1 = [fcBs(:,1) fcBs(:,2)*0+1]; % none
+%fqm1 = [fcBs(:,1) fcBs(:,2)*0+1]; % none
+fqm1 = readSpectra(fq); % CSU emission filter
+fqm1 = reshape(fqm1,2,numel(fqm1)/2)';
+
 save('fqPRB','fqm1');
 
 %% FISHEL LAB (BRT)
@@ -55,6 +59,7 @@ cy5 = readSpectra2(cy5fn);
 
 
 % spectra (x-axis)
+fl=[];
 fl.X{1} = cy2(:,1);
 fl.X{2} = cy3(:,1);
 fl.X{3} = cy5(:,1);

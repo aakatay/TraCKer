@@ -25,6 +25,25 @@ function [mnmx] = dispFluorescenceSpectra(varargin)
     
     FaceAlphaVal = disp.FaceAlphaVal;
     EdgeAlphaVal = disp.EdgeAlphaVal;
+    
+    % output
+    imgFout = 'fluoSpectra.tif';
+    FIGoutFN  = 'fluoSpectra.fig';
+    if isBRT
+        imgFout = ['BRT-' imgFout];
+        FIGoutFN = ['BRT-' FIGoutFN];
+    else
+        imgFout = ['PRB-' imgFout];
+        FIGoutFN = ['PRB-' FIGoutFN];
+    end
+
+    if isCy3
+        imgFout = ['CY3-' imgFout];
+        FIGoutFN = ['CY3-' FIGoutFN];
+    else
+        imgFout = ['GFP-' imgFout];
+        FIGoutFN = ['GFP-' FIGoutFN];
+    end 
 
     %% read input structs
     % (fc) filter cube (Chroma 89401 - ET - DAPI/FITC/TRITC/CY5 Quad)
@@ -58,6 +77,7 @@ function [mnmx] = dispFluorescenceSpectra(varargin)
     %% display
     maximize
     subplot(3,1,1)
+    title('Lasers,Fluos,FilterCube')
     
     % (fc) filter cube
     hold on
@@ -74,12 +94,14 @@ function [mnmx] = dispFluorescenceSpectra(varargin)
             minfcX = max([minfcX; min(fcX{i})]);
             maxfcX = min([maxfcX; max(fcX{i})]);
         end
+        if mean(fcD{i}) == 1, continue; end % empty
         area(fcX{i},fcD{i},'FaceColor',colFC(i,:),'FaceAlpha',FaceAlphaVal,'EdgeAlpha',EdgeAlphaVal);
     end
     hold off
     
     % (fqd) quadview/CSU
     subplot(3,1,2)
+    title('Lasers,Fluos,ExternalDichroic')
     
     minfqdX = 0;
     maxfqdX = 10000;
@@ -105,6 +127,7 @@ function [mnmx] = dispFluorescenceSpectra(varargin)
     
     % (fqm) quadview/CSU
     subplot(3,1,3)
+    title('Lasers,Fluos,ExternalEmissionFilter')
     hold on
     minfqmX = 0;
     maxfqmX = 10000;
@@ -170,9 +193,15 @@ function [mnmx] = dispFluorescenceSpectra(varargin)
     
     
     % calcFluorescenceSpectra
-    if isInterp
+    if isInterp % 2nd call
         mnmx = [];
         calcFluorescenceSpectra
+        
+        figure(702)
+        savefig(FIGoutFN)
+        imgFig = getframe(gcf);
+        imgOut = imgFig.cdata;
+        imwrite(imgOut,imgFout);
     else
         minx = max([minfcX minflX minfqdX]);
         maxx = min([maxfcX maxflX maxfqdX]);

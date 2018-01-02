@@ -64,52 +64,57 @@ function [fdbck] = funcFeedback(cfg,fdbck,fcall)
         save(matFN,'lmpState','-append');
     end
     
-    %% snap/save
-    if dispSS % display done quit Snap/Save
-        inSS = 0; dispSS = 0;
-        if fdbck.ssSnap
-            btnSync = 0; save(btnMAT,'btnSync','-Append'); %pushSync
-        elseif fdbck.ssSave
-            btnStop = 0; save(btnMAT,'btnStop','-Append'); %pushStop
-        end 
-        btnSnap = -1; save(btnMAT,'btnSnap','-append');  % snapping is inactive
-        btnSave = -1; save(btnMAT,'btnSave','-append');  % saving is inactive
-    elseif isSS
-        if inSS == 0
-            if fdbck.ssSnap, btnSnap = 1; save(btnMAT,'btnSnap','-append'); end % snapping is active
-            if fdbck.ssSave, btnSave = 1; save(btnMAT,'btnSave','-append'); end % saving is active
-        end 
-        inSS = inSS + 1;
-        if inSS > cfg.SnapNumFrames*fdbck.ssSnap + cfg.SaveNumFrames*fdbck.ssSave % stop snapping
-            isSS = 0;
-            dispSS = 1;
+    
+    if 1 
+        %% snap/save
+        if dispSS % display done quit Snap/Save
+            inSS = 0; dispSS = 0;
+            if fdbck.ssSnap
+                btnSync = 0; save(btnMAT,'btnSync','-Append'); %pushSync
+            elseif fdbck.ssSave
+                btnStop = 0; save(btnMAT,'btnStop','-Append'); %pushStop
+            end 
+            btnSnap = -1; save(btnMAT,'btnSnap','-append');  % snapping is inactive
+            btnSave = -1; save(btnMAT,'btnSave','-append');  % saving is inactive
+        elseif isSS
+            if inSS == 0 % set button active color
+                if fdbck.ssSnap, btnSnap = 1; save(btnMAT,'btnSnap','-append'); end % snapping is active
+                if fdbck.ssSave, btnSave = 1; save(btnMAT,'btnSave','-append'); end % saving is active
+            end 
+            inSS = inSS + 1;
+            if inSS > cfg.SnapNumFrames*fdbck.ssSnap + cfg.SaveNumFrames*fdbck.ssSave % stop snapping
+                isSS = 0;
+                dispSS = 1;
+            end
         end
-    end
 
-    %% timeout
-    load(btnMAT);
-    if strcmp(fcall,'rtWAmean')
-        if fdbck.toutOn == 1
-            btnStart = -1;
-            btnSync = -1;
-            btnSnap = -1;
-            btnSave = -1;
-            btnStop = -1;    
-            save(btnMAT,'btnStart', 'btnSync', 'btnSnap', 'btnSave', 'btnStop');
-        elseif fdbck.toutOn == -1 % restarting
-            if btnStart == -1  
-                btnStart = 0;
-                save(btnMAT,'btnStart','-append');  
+        %% timeout
+        b_=tryLoadbtnMAT(sprintf('out=load(''%s'');',btnMAT),cfg.tTryLoop);
+        if strcmp(fcall,'rtWAmean')
+            if fdbck.toutOn == 1
+                btnStart = -1;
+                btnSync = -1;
+                btnSnap = -1;
+                btnSave = -1;
+                btnStop = -1;    
+                save(btnMAT,'btnStart', 'btnSync', 'btnSnap', 'btnSave', 'btnStop');
+            elseif fdbck.toutOn == -1 % restarting
+                if b_.btnStart == -1  
+                    btnStart = 0;
+                    save(btnMAT,'btnStart','-append');  
+                end
             end
-        end
-    elseif strcmp(fcall,'rtTrackSNR') 
-        if fdbck.toutOn == -1 % restarted
-            if btnStart == 0
-                btnStart = 1;
-                save(btnMAT,'btnStart','-append');
+        elseif strcmp(fcall,'rtTrackSNR') 
+            if fdbck.toutOn == -1 % restarted
+                if b_.btnStart == 0
+                    btnStart = 1;
+                    save(btnMAT,'btnStart','-append');
+                end
             end
         end
     end
+    
+    %% frame numbers
     nFrst = fdbck.nFrst;
     nLast = fdbck.nLast;
     save(matFN,'nFrst','nLast','-append');

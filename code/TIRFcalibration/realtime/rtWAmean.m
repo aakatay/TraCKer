@@ -42,6 +42,7 @@ function rtWAmean(varargin)
     btnMAT              = 'signals\btnMAT.mat';
     MATrtWAmean         = 'signals\MATrtWAmean.mat';
     quitToutMAT         = 'signals\quitTout.mat';
+    syncFrameMAT        = 'signals\syncFrame.mat';
     % fdbck inputs to funcFeedback : 
     fdbck.nFrst         = 0;
     fdbck.nLast         = 0;
@@ -82,7 +83,7 @@ function rtWAmean(varargin)
         while (1) % wait for update
             dbgWaitAcqTime(clck)
             fnameSeq = ['acq\' fname0 num2str(n,digitFormat) '.tif'];
-            b_=load(btnMAT); btnStart = b_.btnStart; btnSync = b_.btnSync; btnSnap = b_.btnSnap; btnSave = b_.btnSave; btnStop = b_.btnStop; 
+            b_=tryLoadbtnMAT(sprintf('out=load(''%s'');',btnMAT),cfg.tTryLoop); btnStart = b_.btnStart; btnSync = b_.btnSync; btnSnap = b_.btnSnap; btnSave = b_.btnSave; btnStop = b_.btnStop; 
             if btnStop >= 0
                 isStop = 1;
                 break;
@@ -103,31 +104,32 @@ function rtWAmean(varargin)
             end
             
             if fdbck.syncWait % wait for sync
-                if fdbck.syncHere
-                    if btnSync == -1 % reset sync
-                        fdbck.syncWait = 0;
-                        fdbck.syncHere = 0;
+                if ~exist(syncFrameMAT) % save syncFrameMAT and wait till its deletion
+                    if fdbck.syncHere
+                        if btnSync == -1 % reset sync
+                            fdbck.syncWait = 0;
+                        end
+                    elseif btnSync==1
+                        fdir=rdir(['acq\' fname0 '*.tif']);
+                        [~,flast]=max(cell2mat({fdir.datenum}));
+                        fnameSeq = fdir(flast).name; 
+                        n=sscanf(fnameSeq,['acq\\' fname0 '%f.tif']);
+                        nLast = n - waWin + 1;
+                        fdbck.syncHere=1; save(syncFrameMAT,'nLast'); % process new image
                     end
-                elseif btnSync==1
-                    fdir=rdir([fname0 '*.tif']); [~,flast]=max(cell2mat({fdir.datenum})); fnameSeq = fdir(flast).name; 
-                    n=sscanf(fnameSeq,[fname0 '%f.tif']);
-                    fdbck.syncHere=1; save(syncFrameMAT,'nLast'); % process new image
                 end
-            elseif btnSync >= 0 && btnStart==1
-                fdbck.syncWait = 1;
+            elseif btnSync >= 0 && btnStart>=1
+                if n > waWin + 2
+                    fdbck.syncWait = 1;
+                end
             end
             fdbck.nFrst = n - waWin + 1;
             fdbck.nLast = n;
             
             fdbck.runProcess = 0;
             if exist(fnameSeq) % newData
-                if fdbck.syncWait 
-                    if fdbck.syncHere % process update
-                        fdbck.runProcess = 1;
-                    end
-                else % process update
-                    fdbck.runProcess = 1; 
-                end
+                if fdbck.syncHere, fdbck.syncHere = 0; end
+                fdbck.runProcess = 1; % process update
                 tout = toc; % reset timeout time
             elseif fdbck.toutOn==0
                 if isempty(tout)
@@ -135,7 +137,6 @@ function rtWAmean(varargin)
                 elseif toc-tout > timeOut % timeout 
                     fdbck.toutOn = 1;
                 end
-if n>waWin, pause(2); end
             end
             
             [fdbck] = funcFeedback(cfg,fdbck,fcall);
@@ -188,7 +189,7 @@ if n>waWin, pause(2); end
         while (1)
             clck = clock;
             sec = clck(5)*60+clck(6);
-            if sec-sec0>=acqTime
+            if n<cfg.waWin || sec-sec0>=acqTime
                 break
             end
         end

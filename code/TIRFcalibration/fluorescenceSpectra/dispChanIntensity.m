@@ -104,7 +104,7 @@ colormap('gray')
 
 %% save 
         
-if exist(imgFout),delete(imgFout); end;
+if exist(imgFout),delete(imgFout); end
 figure(63)
 imgFig = getframe(gcf);
 imgOut = imgFig.cdata;

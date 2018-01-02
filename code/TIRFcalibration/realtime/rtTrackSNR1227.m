@@ -2,8 +2,8 @@
 % processes 'filename_001.tif'
 function rtTrackSNR(varargin)
 %cd('E:\MATLAB\TIRFcalibration\data\Ata01_5_125X100Y50x50_realtime');    
-dbgSnap    
     isdbgAcquisition = 1; % generated input files for debug
+    
     isCallOutside = 0;
     if nargin == 1
         isCallOutside = 1;
@@ -43,27 +43,23 @@ dbgSnap
     w           = cfg.w;
     h           = cfg.h;
     wsz         = cfg.wsz; % window size for SM crop
-    wsz2        = cfg.wsz2; 
     szXY        = [w h];
     szYX        = fliplr(szXY);
     acqTime     = cfg.acqTime; % [s]
     stdWin      = cfg.stdWin; % number of frames to calc. std
     mag         = cfg.dispMag; % display size
     scrnSzIn    = cfg.scrnSzIn;
-    mag         = 0.8; % cfg.dispMag;
+    mag         =cfg.dispMag;
     SNRcolorThresh = cfg.SNRcolorThresh;
     tloopPause  = cfg.tloopPause;
     isTlog      = cfg.isTlog;
     timeOut     = cfg.timeOut;
-numFrm2Save = cfg.numFrm2Save/10; % # frames to save
-    numFrm2Snap = cfg.numFrm2Snap; % # frames to snap
     tic;
     if isTlog, logFN = cfg.logSNR; fid = fopen(logFN,'w'); c = onCleanup(@()fclose(fid)); wait = 0; end
     if isTlog, clck = clock; fprintf(fid,'start time m= %2i secs=%6.03f\n',clck(5),clck(6)); end
 
     digitFormat = sprintf('%%0%1ii',ndigit);
     s = floor(wsz/2); 
-    s2 = floor(wsz2/2); 
     scrnSzIn = [1600 900];
     scrnSz =get(0,'ScreenSize');
     scrnSz = scrnSz(3:4);
@@ -130,12 +126,20 @@ numFrm2Save = cfg.numFrm2Save/10; % # frames to save
     snrSTDplotFN        = 'snapSaveOUT\SNRstdplot.tif';
     %SNRdataFN = 'SNRdata.mat';
     
+    %% SNR image figure
+    if dbgSNRvoronIMG
+        tit = 'SNR voronoi image';
+        %pos(1) = pos(1) - 800;
+        %pos(1) = pos(1)- 700;        
+        figSNRvoronIMG = figure('DoubleBuffer','on','Menubar','none','Name',tit,'NumberTitle','off','Colormap',gray(256),'Position',[pos szXYmag(1) szXYmag(2)]);
+        axeSNRvoron = axes('Parent',figSNRvoronIMG,'DataAspectRatio',[1 1 1],'Position',[0 0 1 1],'Visible','off','Nextplot','replacechildren','XLim',0.5+[0 szXYmag(1)],'YLim',0.5+[0 szXYmag(2)]);
+    end
+    
     %% SNR plot
     tit = 'SNR plot';
-    %szx2 = szx;
-    szx2 = 400;
+    szx2 = szx;
     szy2 = scrnSzIn(2)-szy-45;
-    pos2 = [pos(1)-szx2+szx scrnSzLeftBottom(2)];
+    pos2 = [pos(1) scrnSzLeftBottom(2)];
     figSNRplot = figure('DoubleBuffer','on','Menubar','none','Name',tit,'NumberTitle','off','Colormap',gray(256),'Position',[pos2 szx2 szy2]);
     %axeSNRplot = axes('Parent',figSNRplot,'DataAspectRatio',[1 1 1],'Position',[0 0 1 1],'Visible','off','Nextplot','replacechildren','XLim',0.5+[0 szXYmag(1)],'YLim',0.5+[0 szXYmag(2)]);
 
@@ -202,20 +206,16 @@ numFrm2Save = cfg.numFrm2Save/10; % # frames to save
     Afrst = padarray(Afrst,[s s]);
     
     %% loop
-    n = 34; fdbck.syncHere = 1; % dbgSnap
-    nf = 1;
+    n = 1;
     f = 1; % a index
     aIX = cell(nt0,1);
     fIX = cell(nt0,1);
     mlast = 0; % SM index for SNR
     ixFrm = 0; % frst frame (0 traces)
     XYS = [];
-    TBI = [];
     snrMean = [];
     tout =[]; % timeout
     syncFrameList = [];
-    SNRmovVoronoiStack = [];
-    isQuit = [];
     while (1)        
         if isTlog, time = toc; fprintf(fid,'while loop n=%3i time=%6.03f\n',n,time); end
         timeLoop(n) = toc;
@@ -227,15 +227,12 @@ numFrm2Save = cfg.numFrm2Save/10; % # frames to save
             b_=tryLoadbtnMAT(sprintf('out=load(''%s'');',btnMAT),cfg.tTryLoop); btnStart = b_.btnStart; btnSync = b_.btnSync; btnSnap = b_.btnSnap; btnSave = b_.btnSave; btnStop = b_.btnStop; 
             if btnStop >= 0
                 fdbck.isStop = 1;
-            end
-            if fdbck.isStop
                 if isQuit 
                     break;
                 else % wait updateCommunication 
                     ; 
                 end
             end
-                
             if fdbck.toutOn == 1 % timeout
                 if exist(quitToutMAT) % quit timeout
                     fdbck.toutOn = -1;
@@ -254,6 +251,9 @@ numFrm2Save = cfg.numFrm2Save/10; % # frames to save
                 if exist(syncFrameMAT) % wait for sync data
                     if fdbck.syncHere % reset sync
                         fdbck.syncWait = 0; 
+                        fdbck.syncHere = 0;
+                        %delete(syncFrameMAT);
+                        % push btnSync=-1
                     else
                         syncMAT=load(syncFrameMAT); nLastSync = syncMAT.nLast; % sync frame
                         n = nLastSync;
@@ -261,7 +261,7 @@ numFrm2Save = cfg.numFrm2Save/10; % # frames to save
                         fdbck.syncHere=1; 
                     end
                 end
-            elseif btnSync >= 0 && btnStart>=1 % check new sync
+            elseif btnSync >= 0 && btnStart==1 % check new sync
                 if exist(syncFrameMAT)
                     syncMAT=load(syncFrameMAT); nLastSync = syncMAT.nLast; % sync frame
                     if ~ismember(nLastSync,syncFrameList) % new sync
@@ -272,12 +272,9 @@ numFrm2Save = cfg.numFrm2Save/10; % # frames to save
                 end 
             end    
             
-            if btnSnap >= 0 || btnSave >= 0 % snap/save
+            if btnSnap == 0 || btnSave == 0 % snap/save
                 if (fdbck.ssSnap || fdbck.ssSave) && fdbck.dispSS % reset snap/save
-                    if fdbck.ssSave % quit
-                        btnStop=1; save(btnMAT,'btnStop','-append');
-                    end
-                    fdbck.ssSnap = 0; fdbck.ssSave = 0; fdbck.dispSS = 0;
+                    fdbck.ssSnap = 0; fdbck.ssSave = 0;
                 elseif fdbck.isSS == 0 && fdbck.syncHere == 1 % enter Snap/Save
                     fdbck.isSS = 1;
                     if btnSnap == 0,fdbck.ssSnap = 1;elseif btnSave == 0,fdbck.ssSave = 1;end                
@@ -290,13 +287,13 @@ numFrm2Save = cfg.numFrm2Save/10; % # frames to save
             
             fdbck.runProcess = 0;
             if exist(traceSeq) % newData
-                if fdbck.syncHere % process update
-                    delete(syncFrameMAT)
-                    btnSync=-1;save(btnMAT,'btnSync','-append');
-                    % dbgSnap %set(btnSync0,'BackgroundColor',cfg.btnColDefault);
-                    fdbck.syncHere=0; 
+                if fdbck.syncWait 
+                    if fdbck.syncHere % process update
+                        fdbck.runProcess = 1;
+                    end
+                else % process update
+                    fdbck.runProcess = 1; 
                 end
-                fdbck.runProcess = 1; % process update 
                 tout = toc; % reset timeout time
             elseif fdbck.toutOn==0 % default
                 if isempty(tout) % run timer
@@ -335,12 +332,6 @@ numFrm2Save = cfg.numFrm2Save/10; % # frames to save
             break;
         end
         n = n + 1;
-        nf = nf + 1;
-        
-        if fdbck.inSS == 1
-            XYS = []; % x,y,snr
-            TBI = []; % trace#,background,intensity
-        end
         
         if 0 && n == 2 % pauses the rtWAmean to sync
             test = []; save test test
@@ -393,8 +384,8 @@ numFrm2Save = cfg.numFrm2Save/10; % # frames to save
         fnameSeq = [fname num2str(n,digitFormat) '.tif'];
         A = imread(fnameSeq);
         A = padarray(A,[s s]);
-        IX = find((frm1<=nf) .* (nf<=frm2));
-        fTrace = nf - frm1(IX) + 1;
+        IX = find((frm1<=n) .* (n<=frm2));
+        fTrace = n - frm1(IX) + 1;
         
         x = ceil(cellfun(@(v) v(end), X(IX)));
         y = ceil(cellfun(@(v) v(end), Y(IX)));    
@@ -403,7 +394,7 @@ numFrm2Save = cfg.numFrm2Save/10; % # frames to save
         t1 = toc;
         findSMisolated; % (x,y) -> ixs
         t2 = toc;
-        tSM(nf) = t2-t1;
+        tSM(n) = t2-t1;
         ixSM = IX(ixs);
         if isempty(ixSM), continue; end
 
@@ -417,32 +408,32 @@ numFrm2Save = cfg.numFrm2Save/10; % # frames to save
             x_ = x(ixs(j));
             %if ((x_<xc1) || (y_<yc1) || (x_>xc2) || (y_>yc2)), tt = tt + 1;continue; end
             if ((x_<=s) || (y_<=s) || (x_+s-1>szXY(1)) || (y_+s-1>szXY(2))), continue; end % at the edge
-            if nf == 2 % add the first frame data
-                a(:,:,f) = Afrst(y_-s+1:y_+s,x_-s+1:x_+s); % crop
+            if n == 2 % add the first frame data
+                a(:,:,f) = Afrst(y_-s:y_+s,x_-s:x_+s); % crop
                 aIX{ixsm} = [aIX{ixsm} f]; % index for the frame of the single molecule
                 fIX{ixsm} = [fIX{ixsm} 1]; % frames
                 f=f+1;
             end
-            a(:,:,f) = A(y_-s+1:y_+s,x_-s+1:x_+s); % crop
+            a(:,:,f) = A(y_-s:y_+s,x_-s:x_+s); % crop
             aIX{ixsm} = [aIX{ixsm} f]; % index for the frame of the single molecule
-            fIX{ixsm} = [fIX{ixsm} nf]; % frames
+            fIX{ixsm} = [fIX{ixsm} n]; % frames
             f=f+1;
         end
         
         %% calculate SNR
         m = 0;
-        Xs = []; Ys = []; Frm = []; TRinf = []; B = []; INT = []; SNR = []; MIX = []; Ts = [];
-        if nf >= stdWin 
+        Xs = []; Ys = []; Frm = []; TRinf = []; B = []; INT = []; SNR = []; MIX = [];
+        if n >= stdWin 
             aIXix_ = find(~cellfun(@isempty,aIX)); % all SM found so far
             aIXix = aIXix_;
-            aIXix( (   (nf-frm1(aIXix)+1)<stdWin   )) = []; % remove SM shorter than stdWin
-            aIXix( (   frm2(aIXix) < nf  )) = []; % remove SM bleach before the current frame (nf)
+            aIXix( (   (n-frm1(aIXix)+1)<stdWin   )) = []; % remove SM shorter than stdWin
+            aIXix( (   frm2(aIXix) < n  )) = []; % remove SM bleach before the current frame (n)
             if dbgSNRimg, snrImg = zeros(szXYmag); end
-            num_ixImg2(nf) = 0;
+            num_ixImg2(n) = 0;
             for j = 1:numel(aIXix) % for each SM 
                 ix = aIXix(j);
                 fr = fIX{ix}; % frames
-                if fr(end) ~= nf
+                if fr(end) ~= n
                     if dbgSel, disp('1nodata'); end
                     continue; end % no data in this frame
                 if numel(fr)-stdWin+1 < 1,if dbgSel,disp('2notenough');end; continue; end % not enough data
@@ -451,33 +442,31 @@ numFrm2Save = cfg.numFrm2Save/10; % # frames to save
                     continue;
                 end
                 m = m + 1;
-                num_ixImg2(nf) = num_ixImg2(nf) + 1;
+                num_ixImg2(n) = num_ixImg2(n) + 1;
                 aix = aIX{ix};
                 asm = a(:,:,aix); % SM crop stack
                 smLast = asm(:,:,end); % last image
 
-                intWin = double(smLast(s-s2+1:s+s2,s-s2+1:s+s2)); % s2 by s2
+                intWin = double(smLast(s-1:s+2,s-1:s+2)); % 4by4
                 int = sum(intWin(:));
                 peak = max(intWin(:));
-                asm(s-s2+1:s+s2,s-s2+1:s+s2,:) = 0;
-                asm = double(asm);
-                asm(asm==0)=nan;
-                a2D = reshape(asm,wsz^2,size(asm,3));
+                asm(s-1:s+2,s-1:s+2,:) = nan;
+                a2D = double(reshape(asm,wsz^2,size(asm,3)));
 
-                astd = std(a2D,0,1,'omitnan');
+                astd = std(a2D,0,1);
                 astd(isnan(astd)) = [];
                 b = mean(astd); % background std
                 snr = peak/sqrt(peak+b^2);
 
                 Xs(m) = ceil(cellfun(@(v) v(end), X(ix)));
                 Ys(m) = ceil(cellfun(@(v) v(end), Y(ix)));
-                Ts(m) = ix; % trace index
-                Frm(m) = nf;
+                Frm(m) = n;
                 TRinf(m,:) = trInf(ix,:);     
                 B(m) = b;
                 INT(m) = int;
                 SNR(m) = snr;                   
                 MIX(m) = ix; % SM index
+                
                 
                 if dbgSNRimg
                     Xmag = round(Xs(m)*mag);
@@ -485,13 +474,13 @@ numFrm2Save = cfg.numFrm2Save/10; % # frames to save
                     snrImg(Ymag,Xmag,j) = SNR(m);
                 end
 
-                %BCK(nf) = mean(bckgrnd(:));
-                %INT(nf) = max(peak(:));
-                %RECT(nf,:) = rect;
+                %BCK(n) = mean(bckgrnd(:));
+                %INT(n) = max(peak(:));
+                %RECT(n,:) = rect;
             end
             
             if dbgSNRimg, snrIMG = sum(snrImg,3); end
-            %sn{nf} = find(snrImg~=0);
+            %sn{n} = find(snrImg~=0);
             %% display
             if dbgSNR
                 figure(figSNR)
@@ -500,7 +489,7 @@ numFrm2Save = cfg.numFrm2Save/10; % # frames to save
             %% save
             %save(SMdataFN,'Xs','Ys','Frm','TRinf','B','INT','SNR','MIX','aIX','fIX');
         else
-            %continue;
+            continue;
         end
         
         if dbgSNRimg
@@ -508,14 +497,13 @@ numFrm2Save = cfg.numFrm2Save/10; % # frames to save
             set(axeSNR,'Parent',figSNRimg,'DataAspectRatio',[1 1 1],'Position',[0 0 1 1],'Visible','off','XLim',1+[0 szXYmag(1)],'YLim',1+[0 szXYmag(2)]);
             imagesc(flipud(snrIMG))
             pause(acqTime)
-            SNRimg(:,:,nf) = snrIMG;
+            SNRimg(:,:,n) = snrIMG;
         end
         
         %sum(reshape(SNRimg,260^2,226),1)
 
         if ~isempty(Xs)
-            XYS = [XYS;Xs' Ys' SNR']; % x,y,snr
-            TBI = [TBI;Ts' B' INT']; % trace#,background,intensity
+            XYS = [XYS;Xs' Ys' SNR']; 
         end
         %save(SNRdataFN,'ixFrm','XYS')
         
@@ -526,48 +514,30 @@ numFrm2Save = cfg.numFrm2Save/10; % # frames to save
         
         % SNR data
         isContinue = 0;
-        xys = XYS(ixFrm(nf-1)+1:ixFrm(nf),:);
+        xys = XYS(ixFrm(n-1)+1:ixFrm(n),:);
         if isempty(xys)
             SNr =[]; isContinue = 1;
-            snrMean(nf) = nan;
+            snrMean(n) = nan;
         else
             SNr = xys(:,3);
-            snrMean(nf) = mean(SNr);
+            snrMean(n) = max(SNr);
         end
         
         % SNR voron
         if fdbck.inSS || dbgSNRvoronIMG
-            if ~exist('figSNRvoronIMG')
-                % SNR image figure
-                tit = 'SNR voronoi image';
-                %pos(1) = pos(1) - 800;
-                %pos(1) = pos(1)- 700;        
-                figSNRvoronIMG = figure('DoubleBuffer','on','Menubar','none','Name',tit,'NumberTitle','off','Colormap',gray(256),'Position',[pos szXYmag(1) szXYmag(2)]);
-                axeSNRvoron = axes('Parent',figSNRvoronIMG,'DataAspectRatio',[1 1 1],'Position',[0 0 1 1],'Visible','off','Nextplot','replacechildren','XLim',0.5+[0 szXYmag(1)],'YLim',0.5+[0 szXYmag(2)]);
-            end
-
             figure(figSNRvoronIMG)
             t1 = toc;
             SNRmovVoronoi = writeSNRvoronoiFrame;
-            SNRmovVoronoiStack(:,:,end+1) = SNRmovVoronoi(:,:,1);
             t2 = toc;
             %figure(figSNRvoronIMG)
             %imagesc(SNRmovVoronoi);
-            tVoron(nf) = t2-t1;
+            tVoron(n) = t2-t1;
             %pause
         end
         
-        if fdbck.ssSnap
-            if fdbck.inSS > numFrm2Snap/2
-                fdbck.dispSS = 1; % show mean snap/save image
-                ssDisp; 
-                cc = 3;
-            end
-        elseif fdbck.ssSave
-            if fdbck.inSS > numFrm2Save
-                fdbck.dispSS = 1;
-                ssDisp; 
-            end
+        if fdbck.dispSS % show mean snap/save image
+            
+            
         end
         
 
@@ -579,9 +549,9 @@ numFrm2Save = cfg.numFrm2Save/10; % # frames to save
         nBars = 13;
         snrBarsDisp = snrMean;
         xd1 = 1;
-        if nf > nBars
-            xd1 = nf - nBars+1;
-            %snrBarsDisp = snrMean(xd1:nf);
+        if n > nBars
+            xd1 = n - nBars+1;
+            %snrBarsDisp = snrMean(xd1:n);
         end
         bar(snrBarsDisp)
         L1 = SNRcolorThresh(1);
@@ -623,62 +593,6 @@ numFrm2Save = cfg.numFrm2Save/10; % # frames to save
 %% FUNCTIONS --------------------------------------------------------    
 
     %% COMMUNICATION vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-    function ssDisp
-        
-        
-        SNRmovVoronoiStack(:,:,1)=[];
-        SNRvoronMean = mean(SNRmovVoronoiStack,3);
-        
-        figure(907);
-        subplot(2,2,1);
-        imagesc(SNRvoronMean); colormap('gray')
-        subplot(2,2,2);
-        plot(snrMean); colormap('gray')
-        title(sprintf('snrMean'))
-        
-        
-        figure(909); % smTest
-        xys = XYS(ixFrm(nf-1)+1:ixFrm(nf),:);
-        tbi = TBI(ixFrm(nf-1)+1:ixFrm(nf),:);
-        
-        BIS = [TBI(:,2:3) XYS(:,3)]; % background intensity snr
-        
-        T = TBI(:,1);
-        TIX = unique(T); % trace indices (trInf)
-        NT = numel(TIX); % number of traces
-        for i = 1:NT % each trace
-            tix = find(T==TIX(i));
-            xyM(i,:) = round(mean(XYS(tix,1:2),1)*mag); % mean xy
-            bisM(i,:) = mean(BIS(tix,:),1); % mean bis
-            bisS(i,:) = std(BIS(tix,:),0,1); % std bis
-        end
-        
-        xy = xys(:,1:2)*mag;
-        imgSNR      = sparse(xyM(:,2),xyM(:,1),bisM(:,3));
-        imgSNRstd   = sparse(xyM(:,2),xyM(:,1),bisS(:,3));
-        imgBCK      = sparse(xyM(:,2),xyM(:,1),bisM(:,1));
-        imgBCKstd   = sparse(xyM(:,2),xyM(:,1),bisS(:,1));
-        imgINT      = sparse(xyM(:,2),xyM(:,1),bisM(:,2));
-        imgINTstd   = sparse(xyM(:,2),xyM(:,1),bisS(:,2));
-                
-        CM = colormap('jet');
-        subplot(2,3,1);
-        imagesc(imgSNR); axis image; colormap(CM); colorbar; title('imgSNR');
-        subplot(2,3,2);
-        imagesc(imgBCK); axis image; colormap(CM); colorbar; title('imgBCK'); 
-        subplot(2,3,3);
-        imagesc(imgINT); axis image; colormap(CM); colorbar; title('imgINT'); 
-        
-        subplot(2,3,4);
-        imagesc(imgSNRstd); axis image; colormap(CM); colorbar; title('imgSNRstd');
-        subplot(2,3,5);
-        imagesc(imgBCKstd); axis image; colormap(CM); colorbar; title('imgBCKstd');
-        subplot(2,3,6);
-        imagesc(imgINTstd); axis image; colormap(CM); colorbar; title('imgINTstd');
-        ccc=3;
-        
-        
-    end
     function dbgAcquisition
         % emulate camera acquisition
         if ~isdbgAcquisition, return; end
@@ -705,7 +619,6 @@ numFrm2Save = cfg.numFrm2Save/10; % # frames to save
             IMGin = imread(inputFN,inputIx);
             imwrite(IMGin,inputFN2);
             inputIx = inputIx + 1;
-            clckAcqTime0 = clckAcqTime;
         end
     end
 
@@ -729,13 +642,13 @@ numFrm2Save = cfg.numFrm2Save/10; % # frames to save
                 set(lmp,'Color',cfg.lmpColStop); 
             elseif matfn.lmpState==-1i % syncWait
                 set(lmp,'Color',cfg.lmpColSyncWait); 
-                %if i == 5, set(btnSync0,'BackgroundColor',cfg.btnColActive); end % send syncReady 
+                if i == 5, set(btnSync0,'BackgroundColor',cfg.btnColActive); end % send syncReady 
             elseif matfn.lmpState==0 % timeout
                 set(lmp,'Color',cfg.lmpColTimeout); 
             elseif matfn.lmpState==1i % syncHere
                 set(lmp,'Color',cfg.lmpColSyncHere); 
             elseif matfn.lmpState==1 % active
-                %checkResetSync;
+                checkResetSync;
                 set(lmp,'Color',cfg.lmpColActive); 
             end
 
@@ -745,7 +658,7 @@ numFrm2Save = cfg.numFrm2Save/10; % # frames to save
         end
 
         % update button states
-        if btnStart == 0 && nf==1, btnStart=1;save(btnMAT,'btnStart','-append'); end % ready for start sync
+        if btnStart == 0 && n==1, btnStart=1;save(btnMAT,'btnStart','-append'); end % ready for start sync
         if btnStart == 1 && btnSync == 0, btnSync=1;save(btnMAT,'btnSync','-append'); end % ready for start sync
         BTNcell = {btnStart,btnSync,btnSnap,btnSave,btnStop}; % variables
         for j = 1:5 % read inputs from five button press
@@ -760,7 +673,7 @@ numFrm2Save = cfg.numFrm2Save/10; % # frames to save
     function checkResetSync
         if i ~= 5, return; end
         if isequal(get(lmp,'Color'), cfg.lmpColSyncHere) % reset sync
-            ;
+            set(btnSync0,'BackgroundColor',cfg.btnColDefault);
         end
         
     end
@@ -799,8 +712,8 @@ numFrm2Save = cfg.numFrm2Save/10; % # frames to save
         smMapCv2 = conv2(smMapCv,ones(wsz),'same');
         smMapCv3 = zeros(szYX);
         smMapCv3(smMapCv2 == wsz^2) = 1;
-        smMapCv4 = circshift(smMapCv3,[1 1]); % wsz : even
-        %smMapCv4 = smMapCv3; % wsz : odd
+        %smMapCv4 = circshift(smMapCv3,[1 1]);
+        smMapCv4 = smMapCv3;
         smMapCv5 = smMapCv4+smMap;
         ixImg = find(smMapCv5==2);
         ixIMG = sub2ind(szYX,y,x)';
@@ -988,7 +901,7 @@ numFrm2Save = cfg.numFrm2Save/10; % # frames to save
         
         CM = jet(256);
         CM = gray(256);
-        for i = 2:nf % frame index
+        for i = 2:n % frame index
             writeSNRvoronoiFrame(i);
         end
     end
@@ -1016,14 +929,15 @@ numFrm2Save = cfg.numFrm2Save/10; % # frames to save
                 EdgeColorSel = 3; % blue
                 
             end
-            [SNRmovVoronoi,tPatch(nf)] = getVoronoinImg(figSNRvoronIMG,xys(:,1:2),SNr/sscale,szXY,mag,CM,EdgeColorSel);
+            [SNRmovVoronoi,tPatch(n)] = getVoronoinImg(figSNRvoronIMG,xys(:,1:2),SNr/sscale,szXY,mag,CM,EdgeColorSel);
             imwrite(SNRmovVoronoi,SNRmovieVoronoiFN,'WriteMode','append','Compression', 'none') 
         end
     end
 
     function setSNRmovieVoronoiFN
-        if fdbck.ssSnap % change filename for multiple snaps
-            SNRmovieVoronoiFNheading = [SNRmovieVoronoiFN0 'Snap'];
+        if btnSnap % change filename for multiple snaps
+            SNRmovieVoronoiFNheading = ['snap' SNRmovieVoronoiFN0];
+            lensConfigFNheading = ['snap' lensConfigFN0];
             fdir=rdir([SNRmovieVoronoiFNheading '*.tif']); 
             [~,flast]=max(cell2mat({fdir.datenum})); 
             ixFN = 1; % first snap
@@ -1031,18 +945,18 @@ numFrm2Save = cfg.numFrm2Save/10; % # frames to save
                 flastFN = fdir(flast).name;
                 ixFN = str2num(flastFN(end-5:end-4))+1;
             end
-            SNRmovieVoronoiFN = [SNRmovieVoronoiFN0 sprintf('Snap%02i.tif',ixFN)];
-            lensConfigFN = [lensConfigFN0 sprintf('Snap%02i.txt',ixFN)];
-        elseif fdbck.ssSave 
-            SNRmovieVoronoiFN = [SNRmovieVoronoiFN0 'Save.tif'];
-            lensConfigFN = [lensConfigFN0 'Save.txt'];
+            SNRmovieVoronoiFN = [SNRmovieVoronoiFNheading sprintf('%02i.tif',ixFN)];
+            lensConfigFN = [lensConfigFNheading sprintf('%02i.txt',ixFN)];
+        elseif btnSave 
+            SNRmovieVoronoiFN = ['save' SNRmovieVoronoiFN0 '.tif'];
+            lensConfigFN = ['save' lensConfigFN0 '.tif'];
         end
         
         % save lens config
         lensParam = {'L1tilt' 'L1shft' 'L1dist' 'L2tilt' 'L2shft' 'L2dist'};
-        if fdbck.inSS==1 % first snap
+        if feedbck.inSS==1 % first snap
             fid = fopen(lensConfigFN,'w');
-            fprintf(fid,'first frame:%i\n',nf);
+            fprintf(fid,'first frame:%i\n',n);
             for i=1:6 % each paramter
                 lensCfg(i) = get(cfg.lensBox(i),'Value');
                 fprintf(fid,'%s:%.02f\n',lensParam{i},lensCfg(i));

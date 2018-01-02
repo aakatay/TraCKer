@@ -10,6 +10,20 @@
 
 dbg = 0;
 
+% output
+fnChanInt = 'channelIntensity';
+if isBRT
+    fnChanInt = ['BRT-' fnChanInt];
+else
+    fnChanInt = ['PRB-' fnChanInt];
+end
+   
+if isCy3
+    fnChanInt = ['CY3-' fnChanInt];
+else
+    fnChanInt = ['GFP-' fnChanInt];
+end 
+
 n = numel(xq);
 P = ones(n,1); % initial intensity
 %% LASER SOURCE
@@ -140,7 +154,7 @@ for i = 1:laserN % each laser
 end
 
 
-save('channelIntensity','chls','chfl','flx')
+save(fnChanInt,'chls','chfl','flx')
 
 
 

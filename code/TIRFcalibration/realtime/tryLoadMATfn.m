@@ -1,4 +1,4 @@
-function out=tryLoad(evalTxt,Tloop)
+function out=tryLoadMATfn(evalTxt,Tloop)
 % tries in loop to load MATrtDetectThresh.mat MATrtTraCKerPos.mat ...
     out=[];
     isErr = 1;

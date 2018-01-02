@@ -68,6 +68,7 @@ function rtTraCKerPos(varargin)
     btnMAT                  = '..\..\signals\btnMAT.mat';
     MATrtTraCKerPos         = '..\..\signals\MATrtTraCKerPos.mat';
     quitToutMAT             = '..\..\signals\quitTout.mat';
+    syncFrameMAT            = '..\..\signals\syncFrame.mat';
     % fdbck inputs to funcFeedback : 
     fdbck.nFrst         = 0;
     fdbck.nLast         = 0;
@@ -90,21 +91,21 @@ function rtTraCKerPos(varargin)
     n = 1;
     isStop = 0;
     tout =[]; % timeout
+    syncFrameList = [];
     while (1)
         if isTlog, time = toc; fprintf(fid,'while loop n=%3i time=%6.03f\n',n,time); end
         
         while (1) % wait for update
             coeffFN = dir('Coeff*.mat');
             if isempty(coeffFN), pause(0.01); continue; end
-            
             Coeff_=loadMAT(coeffFN.name); Coeff = Coeff_.Coeff;
 
-            b_=load(btnMAT); btnStart = b_.btnStart; btnSync = b_.btnSync; btnSnap = b_.btnSnap; btnSave = b_.btnSave; btnStop = b_.btnStop; 
+            b_=tryLoadbtnMAT(sprintf('out=load(''%s'');',btnMAT),cfg.tTryLoop); btnStart = b_.btnStart; btnSync = b_.btnSync; btnSnap = b_.btnSnap; btnSave = b_.btnSave; btnStop = b_.btnStop; 
             if btnStop >= 0
                 isStop = 1;
                 break;
             end
-            if fdbck.toutOn  == 1% timeout
+            if fdbck.toutOn == 1 % timeout
                 if exist(quitToutMAT) % quit timeout
                     fdbck.toutOn = 0;
                 else
@@ -122,31 +123,33 @@ function rtTraCKerPos(varargin)
                 while ~exist(syncFrameMAT) % wait for sync data
                     pause(0.01)
                 end
-                syncMAT=load(syncFrameMAT); nLastSync = syncMAT.nLast; % sync frame
-                n = nLastSync;
                 if fdbck.syncHere
-                    if btnSync == -1 % reset sync
+                    if 1 || btnSync == -1 % reset sync
                         fdbck.syncWait = 0;
-                        fdbck.syncHere = 0;
                     end
                 else
+                    syncMAT=load(syncFrameMAT); nLastSync = syncMAT.nLast; % sync frame
+                    n = nLastSync;
+                    syncFrameList = [syncFrameList n];
                     fdbck.syncHere=1; 
                 end
-            elseif btnSync >= 0 && btnStart==1
-                fdbck.syncWait = 1;
+            elseif btnSync >= 0 && btnStart>=1 % check new sync
+                if exist(syncFrameMAT)
+                    syncMAT=load(syncFrameMAT); nLastSync = syncMAT.nLast; % sync frame
+                    if ~ismember(nLastSync,syncFrameList) % new sync
+                        fdbck.syncWait = 1;
+                    end
+                else % new sync
+                    fdbck.syncWait = 1;
+                end 
             end            
             fdbck.nFrst = n;
             fdbck.nLast = n + waWin - 1;
             
             fdbck.runProcess = 0;
             if numel(Coeff) >= n % newData
-                if fdbck.syncWait 
-                    if fdbck.syncHere % process update
-                        fdbck.runProcess = 1;
-                    end
-                else % process update
-                    fdbck.runProcess = 1; 
-                end
+                if fdbck.syncHere, fdbck.syncHere = 0; end
+                fdbck.runProcess = 1; % process update
                 tout = toc; % reset timeout time
             elseif fdbck.toutOn==0
                 if isempty(tout)

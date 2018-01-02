@@ -1,2 +1,2 @@
  % Gaussian
- 
+ % of different illuminations

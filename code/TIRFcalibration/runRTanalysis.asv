@@ -13,7 +13,6 @@ isdbgAcquisition = 1;
     bc = 4; % [nM] background concentration (for Coeff detection)
     acqTime = 1;% [s]
     numFrm2Save = 200; % # frames to save
-    numFrm2Snap = 20;
     
     
     % configRT.mat
@@ -37,11 +36,10 @@ isdbgAcquisition = 1;
     cfg.sptReAppearTime = 2; % [frames]
     cfg.sptJmpForTracing = 1; % [px]
     cfg.stdWin = 10; % number of frames to calc. std
-    cfg.wsz = 6; % [even number] window size
-    cfg.wsz2 = 2; % [even number] intensity window size
+    cfg.wsz = 5; % window size
     cfg.wszTracker = 5; % window size
     cfg.numFrm2Save = numFrm2Save; % # frames to save
-    cfg.numFrm2Snap = numFrm2Snap; % # frames to snap
+    cfg.numFrm2Snap = numFrm2Save; % # frames to save
     cfg.cropTXT = [];
     %cfg.cropTXT = '125X100Y50x50';
     %cfg.cropTXT = '0X0Y512x512';

@@ -215,7 +215,6 @@ numFrm2Save = cfg.numFrm2Save/10; % # frames to save
     tout =[]; % timeout
     syncFrameList = [];
     SNRmovVoronoiStack = [];
-    isQuit = [];
     while (1)        
         if isTlog, time = toc; fprintf(fid,'while loop n=%3i time=%6.03f\n',n,time); end
         timeLoop(n) = toc;
@@ -227,15 +226,12 @@ numFrm2Save = cfg.numFrm2Save/10; % # frames to save
             b_=tryLoadbtnMAT(sprintf('out=load(''%s'');',btnMAT),cfg.tTryLoop); btnStart = b_.btnStart; btnSync = b_.btnSync; btnSnap = b_.btnSnap; btnSave = b_.btnSave; btnStop = b_.btnStop; 
             if btnStop >= 0
                 fdbck.isStop = 1;
-            end
-            if fdbck.isStop
                 if isQuit 
                     break;
                 else % wait updateCommunication 
                     ; 
                 end
             end
-                
             if fdbck.toutOn == 1 % timeout
                 if exist(quitToutMAT) % quit timeout
                     fdbck.toutOn = -1;
@@ -274,10 +270,9 @@ numFrm2Save = cfg.numFrm2Save/10; % # frames to save
             
             if btnSnap >= 0 || btnSave >= 0 % snap/save
                 if (fdbck.ssSnap || fdbck.ssSave) && fdbck.dispSS % reset snap/save
-                    if fdbck.ssSave % quit
-                        btnStop=1; save(btnMAT,'btnStop','-append');
-                    end
+                    if fdbck.ssSave,
                     fdbck.ssSnap = 0; fdbck.ssSave = 0; fdbck.dispSS = 0;
+                    
                 elseif fdbck.isSS == 0 && fdbck.syncHere == 1 % enter Snap/Save
                     fdbck.isSS = 1;
                     if btnSnap == 0,fdbck.ssSnap = 1;elseif btnSave == 0,fdbck.ssSave = 1;end                
@@ -532,7 +527,7 @@ numFrm2Save = cfg.numFrm2Save/10; % # frames to save
             snrMean(nf) = nan;
         else
             SNr = xys(:,3);
-            snrMean(nf) = mean(SNr);
+            snrMean(nf) = max(SNr);
         end
         
         % SNR voron
@@ -675,7 +670,7 @@ numFrm2Save = cfg.numFrm2Save/10; % # frames to save
         imagesc(imgBCKstd); axis image; colormap(CM); colorbar; title('imgBCKstd');
         subplot(2,3,6);
         imagesc(imgINTstd); axis image; colormap(CM); colorbar; title('imgINTstd');
-        ccc=3;
+        title(sprintf('snrMean'))
         
         
     end
