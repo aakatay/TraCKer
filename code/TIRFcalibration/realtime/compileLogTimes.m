@@ -33,3 +33,4 @@ for i = 1:5
     end
 end
 save('timeSync','loopT')
+fclose('all');

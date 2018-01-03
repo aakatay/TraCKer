@@ -2,7 +2,10 @@
 % processes 'filename_001.tif'
 function rtTrackSNR(varargin)
 %cd('E:\MATLAB\TIRFcalibration\data\Ata01_5_125X100Y50x50_realtime');    
-dbgSnap    
+
+    dbgSaveR = 1;
+    dbgSnapR = 1;
+% dbgSnap
     isdbgAcquisition = 1; % generated input files for debug
     isCallOutside = 0;
     if nargin == 1
@@ -55,7 +58,7 @@ dbgSnap
     tloopPause  = cfg.tloopPause;
     isTlog      = cfg.isTlog;
     timeOut     = cfg.timeOut;
-numFrm2Save = cfg.numFrm2Save/10; % # frames to save
+    numFrm2Save = cfg.numFrm2Save; % # frames to save
     numFrm2Snap = cfg.numFrm2Snap; % # frames to snap
     tic;
     if isTlog, logFN = cfg.logSNR; fid = fopen(logFN,'w'); c = onCleanup(@()fclose(fid)); wait = 0; end
@@ -110,34 +113,37 @@ numFrm2Save = cfg.numFrm2Save/10; % # frames to save
         btnSnap0 = cfg.btns.btnSnap0;
         btnSave0 = cfg.btns.btnSave0;
         btnStop0 = cfg.btns.btnStop0;
-        BTNcell0 = {btnStart0,btnSync0,btnSync0,btnSave0,btnStop0};
-        
-        
+        BTNcell0 = {btnStart0,btnSync0,btnSnap0,btnSave0,btnStop0};
+                
         btnCol = [cfg.btnColDefault;cfg.btnColPress;cfg.btnColActive];
         
-        isQuit = [];
-        lmp = [];
-        i = [];
     end
     %% output files
-    SNRmovieFN          = 'snapSaveOUT\SNRmovie.tif';
-    SNRmovieConvFN      = 'snapSaveOUT\SNRmovieConv.tif';
-    SNRmovieVoronoiFN0  = 'snapSaveOUT\SNRmovieVoronoi'; % .tif label
-    SNRmovieVoronoiFN   = [];
-    lensConfigFN0       = 'snapSaveOUT\lensConfig'; % .txt label
-    SNRplotFN           = 'snapSaveOUT\SNRplot.tif';
-    numSMplotFN         = 'snapSaveOUT\SNRnumSMplot.tif';
-    snrSTDplotFN        = 'snapSaveOUT\SNRstdplot.tif';
-    %SNRdataFN = 'SNRdata.mat';
+    SNRmovieFN              = 'snapSaveOUT\SNRmovie.tif';
+    SNRmovieConvFN          = 'snapSaveOUT\SNRmovieConv.tif';
+    SNRplotFN               = 'snapSaveOUT\SNRplot.tif';
+    numSMplotFN             = 'snapSaveOUT\SNRnumSMplot.tif';
+    snrSTDplotFN            = 'snapSaveOUT\SNRstdplot.tif';
     
-    %% SNR plot
-    tit = 'SNR plot';
+    SNRmovieVoronoiMeanFN0  = 'snapSaveOUT\SNRvoronoiMovieMean'; % .tif label
+    SNRmovieVoronoiFN0      = 'snapSaveOUT\SNRvoronoiMovie'; % .tif label
+    SNRfigSingleMoleculeFN0 = 'snapSaveOUT\SNRfigSingleMolecule'; % fig/tif label
+    SNRfigDataFN0           = 'snapSaveOUT\SNRfigData'; % fig/tif label
+    lensConfigFN0           = 'snapSaveOUT\lensConfig'; % .txt label
+    %SNRdataFN = 'SNRdata.mat';
+  
+    %% figures
+    tit1 = 'SNR plot';
+    tit2 = 'figData';
+    tit3 = 'figSingleMolecule';
     %szx2 = szx;
     szx2 = 400;
     szy2 = scrnSzIn(2)-szy-45;
     pos2 = [pos(1)-szx2+szx scrnSzLeftBottom(2)];
-    figSNRplot = figure('DoubleBuffer','on','Menubar','none','Name',tit,'NumberTitle','off','Colormap',gray(256),'Position',[pos2 szx2 szy2]);
+    figSNRplot          = figure('DoubleBuffer','on','Menubar','none','Name',tit1,'NumberTitle','off','Colormap',gray(256),'Position',[pos2 szx2 szy2]);
     %axeSNRplot = axes('Parent',figSNRplot,'DataAspectRatio',[1 1 1],'Position',[0 0 1 1],'Visible','off','Nextplot','replacechildren','XLim',0.5+[0 szXYmag(1)],'YLim',0.5+[0 szXYmag(2)]);
+    figData             = figure('DoubleBuffer','on','Menubar','none','Name',tit2,'NumberTitle','off'); 
+    figSingleMolecule   = figure('DoubleBuffer','on','Menubar','none','Name',tit3,'NumberTitle','off'); 
 
     if dbgSNRimg
         tit = 'SNR image';
@@ -184,8 +190,19 @@ numFrm2Save = cfg.numFrm2Save/10; % # frames to save
     fdbck.isSS          = 0;
     fdbck.inSS          = 0;
     fdbck.dispSS        = 0;
+    fdbck.inSSplus      = 0;
     % others
     
+    % set shared variables
+    isQuit = [];
+    lmp = [];
+    i = [];
+    ixFN = [];
+    SNRmovieVoronoiMeanFN   = []; % .tif label
+    SNRmovieVoronoiFN       = []; % .tif label
+    SNRfigSingleMoleculeFN  = []; % fig/tif label
+    SNRfigDataFN            = []; % fig/tif label
+    lensConfigFN            = [];
     
     %% display figure
     if dbgSNR
@@ -201,8 +218,9 @@ numFrm2Save = cfg.numFrm2Save/10; % # frames to save
     Afrst = imread(fnameSeq);
     Afrst = padarray(Afrst,[s s]);
     
-    %% loop
-    n = 34; fdbck.syncHere = 1; % dbgSnap
+    %% loop        
+    %n = 4; fdbck.syncHere = 1; % dbgSnap
+    n = 1;
     nf = 1;
     f = 1; % a index
     aIX = cell(nt0,1);
@@ -215,7 +233,6 @@ numFrm2Save = cfg.numFrm2Save/10; % # frames to save
     tout =[]; % timeout
     syncFrameList = [];
     SNRmovVoronoiStack = [];
-    isQuit = [];
     while (1)        
         if isTlog, time = toc; fprintf(fid,'while loop n=%3i time=%6.03f\n',n,time); end
         timeLoop(n) = toc;
@@ -257,7 +274,7 @@ numFrm2Save = cfg.numFrm2Save/10; % # frames to save
                     else
                         syncMAT=load(syncFrameMAT); nLastSync = syncMAT.nLast; % sync frame
                         n = nLastSync;
-                        syncFrameList = [syncFrameList n];
+                        syncFrameList = [syncFrameList nLastSync];
                         fdbck.syncHere=1; 
                     end
                 end
@@ -293,7 +310,7 @@ numFrm2Save = cfg.numFrm2Save/10; % # frames to save
                 if fdbck.syncHere % process update
                     delete(syncFrameMAT)
                     btnSync=-1;save(btnMAT,'btnSync','-append');
-                    % dbgSnap %set(btnSync0,'BackgroundColor',cfg.btnColDefault);
+                    set(btnSync0,'BackgroundColor',cfg.btnColDefault);
                     fdbck.syncHere=0; 
                 end
                 fdbck.runProcess = 1; % process update 
@@ -337,9 +354,15 @@ numFrm2Save = cfg.numFrm2Save/10; % # frames to save
         n = n + 1;
         nf = nf + 1;
         
+        if fdbck.inSSplus
+            fdbck.inSS = fdbck.inSS + 1;
+        end
+        
         if fdbck.inSS == 1
-            XYS = []; % x,y,snr
-            TBI = []; % trace#,background,intensity
+            XYSss = []; % x,y,snr
+            TBIss = []; % trace#,background,intensity
+            writeLensConfig;
+            ixFrmSS = ixFrm(end)+1;
         end
         
         if 0 && n == 2 % pauses the rtWAmean to sync
@@ -526,7 +549,11 @@ numFrm2Save = cfg.numFrm2Save/10; % # frames to save
         
         % SNR data
         isContinue = 0;
-        xys = XYS(ixFrm(nf-1)+1:ixFrm(nf),:);
+        try
+            xys = XYS(ixFrm(nf-1)+1:ixFrm(nf),:);
+        catch
+            ccc=3;
+        end
         if isempty(xys)
             SNr =[]; isContinue = 1;
             snrMean(nf) = nan;
@@ -546,6 +573,7 @@ numFrm2Save = cfg.numFrm2Save/10; % # frames to save
                 axeSNRvoron = axes('Parent',figSNRvoronIMG,'DataAspectRatio',[1 1 1],'Position',[0 0 1 1],'Visible','off','Nextplot','replacechildren','XLim',0.5+[0 szXYmag(1)],'YLim',0.5+[0 szXYmag(2)]);
             end
 
+            
             figure(figSNRvoronIMG)
             t1 = toc;
             SNRmovVoronoi = writeSNRvoronoiFrame;
@@ -558,13 +586,13 @@ numFrm2Save = cfg.numFrm2Save/10; % # frames to save
         end
         
         if fdbck.ssSnap
-            if fdbck.inSS > numFrm2Snap/2
+            if fdbck.inSS > numFrm2Snap/dbgSnapR
                 fdbck.dispSS = 1; % show mean snap/save image
                 ssDisp; 
                 cc = 3;
             end
         elseif fdbck.ssSave
-            if fdbck.inSS > numFrm2Save
+            if fdbck.inSS > numFrm2Save/dbgSaveR
                 fdbck.dispSS = 1;
                 ssDisp; 
             end
@@ -624,36 +652,39 @@ numFrm2Save = cfg.numFrm2Save/10; % # frames to save
 
     %% COMMUNICATION vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
     function ssDisp
-        
-        
         SNRmovVoronoiStack(:,:,1)=[];
-        SNRvoronMean = mean(SNRmovVoronoiStack,3);
+        SNRvoronMean = uint16(mean(SNRmovVoronoiStack,3));
+        imwrite(SNRvoronMean,SNRmovieVoronoiMeanFN) 
         
-        figure(907);
+        %% figData
+        figure(figData); maximize;
         subplot(2,2,1);
         imagesc(SNRvoronMean); colormap('gray')
         subplot(2,2,2);
         plot(snrMean); colormap('gray')
         title(sprintf('snrMean'))
         
+        imgFig = getframe(gcf);
+        imgOut = imgFig.cdata;
+        imwrite(imgOut,SNRfigDataFN);
         
-        figure(909); % smTest
-        xys = XYS(ixFrm(nf-1)+1:ixFrm(nf),:);
-        tbi = TBI(ixFrm(nf-1)+1:ixFrm(nf),:);
+        %% figSingleMolecule
+        figure(figSingleMolecule); maximize;
+        XYSss = XYS(ixFrmSS:end,:);
+        TBIss = TBI(ixFrmSS:end,:);
         
-        BIS = [TBI(:,2:3) XYS(:,3)]; % background intensity snr
+        BIS = [TBIss(:,2:3) XYSss(:,3)]; % background intensity snr
         
-        T = TBI(:,1);
+        T = TBIss(:,1);
         TIX = unique(T); % trace indices (trInf)
         NT = numel(TIX); % number of traces
         for i = 1:NT % each trace
             tix = find(T==TIX(i));
-            xyM(i,:) = round(mean(XYS(tix,1:2),1)*mag); % mean xy
+            xyM(i,:) = round(mean(XYSss(tix,1:2),1)*mag); % mean xy
             bisM(i,:) = mean(BIS(tix,:),1); % mean bis
             bisS(i,:) = std(BIS(tix,:),0,1); % std bis
         end
         
-        xy = xys(:,1:2)*mag;
         imgSNR      = sparse(xyM(:,2),xyM(:,1),bisM(:,3));
         imgSNRstd   = sparse(xyM(:,2),xyM(:,1),bisS(:,3));
         imgBCK      = sparse(xyM(:,2),xyM(:,1),bisM(:,1));
@@ -677,6 +708,9 @@ numFrm2Save = cfg.numFrm2Save/10; % # frames to save
         imagesc(imgINTstd); axis image; colormap(CM); colorbar; title('imgINTstd');
         ccc=3;
         
+        imgFig = getframe(gcf);
+        imgOut = imgFig.cdata;
+        imwrite(imgOut,SNRfigSingleMoleculeFN);
         
     end
     function dbgAcquisition
@@ -684,15 +718,15 @@ numFrm2Save = cfg.numFrm2Save/10; % # frames to save
         if ~isdbgAcquisition, return; end
         try
             IMGin = imread(inputFN,inputIx);
-        catch
+        catch % last frame
             isdbgAcquisition = 0; return;
         end
         inputFN2  = sprintf('acq\\%s_%04i.tif',inputFN(7:end-4),inputIx);
         clckAcq = clock; clckAcqTime = clckAcq(4)*24+clckAcq(5)*60+clckAcq(6);
         clckPause = clock; clckPauseTime = clckPause(4)*24+clckPause(5)*60+clckPause(6);
         if inputIx<cfg.waWin || clckAcqTime - clckAcqTime0 > cfg.acqTime % generate input image
-            if ixPause == inputIx % pause acq here
-                if ~clckPauseTime0
+            if 0&& ixPause == inputIx % dbg time out: pause acq here
+                if ~clckPauseTime0 % first time read
                     clckPause = clock; 
                     clckPauseTime0 = clckPause(4)*24+clckPause(5)*60+clckPause(6); % set pause timer
                 end
@@ -768,7 +802,7 @@ numFrm2Save = cfg.numFrm2Save/10; % # frames to save
 
     function checkStop
         % check if btnStop
-        if ~isequal(get(btnStop0,'BackgroundColor'), cfg.btnColPress), return; end
+        if isequal(get(btnStop0,'BackgroundColor'), cfg.btnColDefault), return; end
         % check if all workers stopped
         if ~isequal(get(lmp1,'Color'), cfg.lmpColStop), return; end
         if ~isequal(get(lmp2,'Color'), cfg.lmpColStop), return; end
@@ -817,9 +851,6 @@ numFrm2Save = cfg.numFrm2Save/10; % # frames to save
             figure(349);imagesc(smMapCv5)
             cc=4;
         end
-    end
-        
-    function runSNRmov
     end
 
     function runSNRplot
@@ -936,24 +967,6 @@ numFrm2Save = cfg.numFrm2Save/10; % # frames to save
 
 
 %% ============ Analysis ===================================================
-    function runAnalysisWin
-        fig= uifigure('Position',[20 200 300 300]);
-
-        x1 = 20;
-        dy = 30;
-        y1 = [0:3]*dy+10;
-
-        w = 100;
-        h1 = 20;
-        btn1 = uibutton(fig,'Position',[x1 y1(1) w h1],'Text','Intensity','ButtonPushedFcn', @(btn1,event) dispTraceInt);
-        btn2 = uibutton(fig,'Position',[x1 y1(2) w h1],'Text','SNR','ButtonPushedFcn', @(btn2,event) runPause);
-        btn3 = uibutton(fig,'Position',[x1 y1(3) w h1],'Text','SNR movie','ButtonPushedFcn', @(btn3,event) writeSNRmov);
-        btn4 = uibutton(fig,'Position',[x1 y1(4) w h1],'Text','SNR voronoi mov','ButtonPushedFcn', @(btn4,event) writeSNRvoronoiMov);
-        while(1)
-            pause(1)
-        end
-    end
-
     function dispTraceInt
         figure(901)
         hold on
@@ -983,24 +996,12 @@ numFrm2Save = cfg.numFrm2Save/10; % # frames to save
     end
 
 
-    function writeSNRvoronoiMov
-        delete(SNRmovieVoronoiFN);
-        
-        CM = jet(256);
-        CM = gray(256);
-        for i = 2:nf % frame index
-            writeSNRvoronoiFrame(i);
-        end
-    end
-
 
     function SNRmovVoronoi = writeSNRvoronoiFrame
         CM = gray(256);
         if numel(SNr) < 5 % write a blank image
             SNRmovVoronoi = zeros(szXY*mag);
-            %imwrite(SNRmovVoronoi,SNRmovieVoronoiFN,'WriteMode','append','Compression', 'none') 
         else
-%SNRcolorThresh = [.1 5];
             % SNR intensity range scales
             if max(SNr)<SNRcolorThresh(1)
                 sscale = SNRcolorThresh(1);
@@ -1017,58 +1018,52 @@ numFrm2Save = cfg.numFrm2Save/10; % # frames to save
                 
             end
             [SNRmovVoronoi,tPatch(nf)] = getVoronoinImg(figSNRvoronIMG,xys(:,1:2),SNr/sscale,szXY,mag,CM,EdgeColorSel);
-            imwrite(SNRmovVoronoi,SNRmovieVoronoiFN,'WriteMode','append','Compression', 'none') 
+            imwrite(uint16(SNRmovVoronoi),SNRmovieVoronoiFN,'WriteMode','append','Compression', 'none') 
         end
     end
 
     function setSNRmovieVoronoiFN
         if fdbck.ssSnap % change filename for multiple snaps
-            SNRmovieVoronoiFNheading = [SNRmovieVoronoiFN0 'Snap'];
-            fdir=rdir([SNRmovieVoronoiFNheading '*.tif']); 
-            [~,flast]=max(cell2mat({fdir.datenum})); 
-            ixFN = 1; % first snap
-            if ~isempty(flast) % another file
-                flastFN = fdir(flast).name;
-                ixFN = str2num(flastFN(end-5:end-4))+1;
-            end
-            SNRmovieVoronoiFN = [SNRmovieVoronoiFN0 sprintf('Snap%02i.tif',ixFN)];
-            lensConfigFN = [lensConfigFN0 sprintf('Snap%02i.txt',ixFN)];
+            lastSNRmovieVoronoiFN; % get ixFN
+            SNRmovieVoronoiFN       = [SNRmovieVoronoiFN0       sprintf('Snap%02i.tif',ixFN)];
+            SNRmovieVoronoiMeanFN   = [SNRmovieVoronoiMeanFN0   sprintf('Snap%02i.tif',ixFN)];
+            SNRfigSingleMoleculeFN  = [SNRfigSingleMoleculeFN0  sprintf('Snap%02i.tif',ixFN)];
+            SNRfigDataFN            = [SNRfigDataFN0            sprintf('Snap%02i.tif',ixFN)];
+            lensConfigFN            = [lensConfigFN0            sprintf('Snap%02i.txt',ixFN)];
         elseif fdbck.ssSave 
-            SNRmovieVoronoiFN = [SNRmovieVoronoiFN0 'Save.tif'];
-            lensConfigFN = [lensConfigFN0 'Save.txt'];
+            SNRmovieVoronoiFN       = [SNRmovieVoronoiFN0       'Save.tif'];
+            SNRmovieVoronoiMeanFN   = [SNRmovieVoronoiMeanFN0   'Save.tif'];
+            SNRfigSingleMoleculeFN  = [SNRfigSingleMoleculeFN0  'Save.tif'];
+            SNRfigDataFN            = [SNRfigDataFN0            'Save.tif'];
+            lensConfigFN            = [lensConfigFN0            'Save.txt'];
+        end 
+    end
+
+    function lastSNRmovieVoronoiFN
+        SNRmovieVoronoiFNheading = [SNRmovieVoronoiFN0 'Snap'];
+        fdir=rdir([SNRmovieVoronoiFNheading '*.tif']); 
+        [~,flast]=max(cell2mat({fdir.datenum})); 
+        ixFN = 1; % first snap
+        if ~isempty(flast) % another file
+            flastFN = fdir(flast).name;
+            ixFN = str2num(flastFN(end-5:end-4))+1;
         end
-        
+    end
+
+
+    function writeLensConfig
         % save lens config
         lensParam = {'L1tilt' 'L1shft' 'L1dist' 'L2tilt' 'L2shft' 'L2dist'};
-        if fdbck.inSS==1 % first snap
-            fid = fopen(lensConfigFN,'w');
-            fprintf(fid,'first frame:%i\n',nf);
-            for i=1:6 % each paramter
-                lensCfg(i) = get(cfg.lensBox(i),'Value');
-                fprintf(fid,'%s:%.02f\n',lensParam{i},lensCfg(i));
-            end
-            fclose(fid);
+        fid2 = fopen(lensConfigFN,'w');
+        fprintf(fid2,'first frame:%i\n',nf);
+        for i=1:6 % each paramter
+            lensCfg(i) = get(cfg.lensBox(i),'Value');
+            fprintf(fid2,'%s:%.02f\n',lensParam{i},lensCfg(i));
         end
-    end
-        
-
-    function playSNRvoronoiMov
-        fnMov = dir([SNRmovieConvFN(1:end-4) '*.tif']);
-        if ~isempty(fnMov)
-        end
+        fclose(fid2);
     end
 
-    function writeSNRmov
-        if ~dbgSNRimg, return; end
-        %% SNR movie
-        if ~isempty(find(SNRimg*SNRmul>=2^16)), warning('SNR image saturated use lower a SNRmul');end
-        %SNRmovieConvFN2 = [ SNRmovieConvFN(1:end-4) sprintf('frm%04i-%04i.tif',) ]
-        SNRmov = SNRimg*SNRmul;
-        stackWrite(SNRmov,SNRmovieFN);
-        cvWin = ones(5);
-        SNRmovCv = convn(SNRmov,cvWin,'same');
-        stackWrite(SNRmovCv,SNRmovieConvFN);
-    end
+
 
 end
 

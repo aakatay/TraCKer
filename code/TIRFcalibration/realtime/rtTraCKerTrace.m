@@ -159,7 +159,7 @@ tprm0 = toc; % vvvvvvvvvvvvvvvvvvvvvvvvv
                         
             fdbck.runProcess = 0;
             if ~isempty(posFN) % newData
-                if fdbck.syncHere, fdbck.syncHere = 0; end
+                if fdbck.syncHere, fdbck.syncHere = 0; fdbck.syncWait = 0; end
                 fdbck.runProcess = 1; % process update
                 tout = toc; % reset timeout time
             elseif fdbck.toutOn==0
@@ -232,6 +232,7 @@ tprm(n,4) = tprm2-tprm0;
         
         if nt == 1 % first frame only
             nt = 2; 
+            n = n+1;
             XP = XC; YP = YC;
             ixtp = ixtc;
             pnIMG = circshift(pnIMG,[0 0 1]);

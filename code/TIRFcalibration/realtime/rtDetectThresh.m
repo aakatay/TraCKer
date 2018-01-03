@@ -153,7 +153,7 @@ function rtDetectThresh(varargin)
             
             fdbck.runProcess = 0;
             if exist(fnameSeq) % newData
-                if fdbck.syncHere, fdbck.syncHere = 0; end
+                if fdbck.syncHere, fdbck.syncHere = 0; fdbck.syncWait = 0; end
                 fdbck.runProcess = 1; % process update
                 tout = toc; % reset timeout time
             elseif fdbck.toutOn==0

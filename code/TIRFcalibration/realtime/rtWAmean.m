@@ -119,7 +119,7 @@ function rtWAmean(varargin)
                     end
                 end
             elseif btnSync >= 0 && btnStart>=1
-                if n > waWin + 2
+                if n > waWin + 2 % for start send the sync with delay
                     fdbck.syncWait = 1;
                 end
             end

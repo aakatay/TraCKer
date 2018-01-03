@@ -12,6 +12,7 @@ isdbgAcquisition = 1;
     ndigit = 4;
     bc = 4; % [nM] background concentration (for Coeff detection)
     acqTime = 1;% [s]
+    acqTime = .4;% [s]
     numFrm2Save = 200; % # frames to save
     numFrm2Snap = 20;
     
@@ -75,13 +76,21 @@ isdbgAcquisition = 1;
     cfg.lmpColSyncHere  = [1 0 1]; % magenta
     cfg.lmpColActive    = [0 1 0]; % green
     
+    %% folder structure
+    if 1 
+        if exist('acq'), rmdir('acq', 's'); end; mkdir('acq')
+        if exist('snapSaveOUT'), rmdir('snapSaveOUT', 's'); end; mkdir('snapSaveOUT')
+        if exist('signals'), rmdir('signals', 's'); end; mkdir('signals')
+        if exist(cfg.outDIR), rmdir(cfg.outDIR, 's'); end
+        mkdir waSeq
+        mkdir waSeq\tracker
+        mkdir waSeq\tracker\rtData
+        while ~exist('waSeq\tracker\rtData')
+            pause(0.1)
+        end
+    end
+
     %% communication
-    if exist('acq'), rmdir('acq', 's'); end
-    mkdir('acq')
-    if exist('snapSaveOUT'), rmdir('snapSaveOUT', 's'); end
-    mkdir('snapSaveOUT')
-    if exist('signals'), rmdir('signals', 's'); end
-    mkdir('signals')
     MATrtWAmean         = 'signals\MATrtWAmean.mat';
     MATrtDetectThresh   = 'signals\MATrtDetectThresh.mat';
     MATrtTraCKerPos     = 'signals\MATrtTraCKerPos.mat';
@@ -108,15 +117,6 @@ isdbgAcquisition = 1;
     % parallel workers
     f1=[];f2=[];f3=[];f4=[];
     
-    %% folder structure
-    
-    if exist(cfg.outDIR), rmdir(cfg.outDIR, 's'); end
-    mkdir waSeq
-    mkdir waSeq\tracker
-    mkdir waSeq\tracker\rtData
-    while ~exist('waSeq\tracker\rtData')
-        pause(0.1)
-    end
     %% log
     fclose('all');
     if exist('logData')~=7
@@ -256,8 +256,8 @@ isdbgAcquisition = 1;
     
 	%dbgUpdateCommunication(cfg);
     %while 1, pause(0.1); end
-    return
     runStart
+    return
     
     
 %% functions ====================================================    
@@ -287,6 +287,7 @@ isdbgAcquisition = 1;
     
     function runSave
         btnSave = 0; save(btnMAT,'btnSave','-Append');
+        runSync
     end 
 
     function runSnap
