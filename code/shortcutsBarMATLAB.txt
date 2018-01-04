@@ -1,0 +1,45 @@
+show figures
+
+all_figure_handles = findall(0, 'type', 'figure');
+
+for iCount = length(all_figure_handles):-1:1
+
+      figure(all_figure_handles(iCount))
+end
+
+clear all_figure_handles icount
+
+===========================================
+delete figures
+
+delete(findall(0,'Type','figure'))
+
+===========================================
+
+
+restart parallel pool
+deleteALLparallelPools
+gcp
+
+
+===========================================
+open runRT
+
+open runRTanalysis
+
+===========================================
+
+open compile
+open compileLogTimes
+===========================================
+deleteALLparallelPools
+deleteALLparallelPools
+
+
+===========================================
+
+run runRT
+deleteALLparallelPools
+gcp
+cd('E:\MATLAB\TIRFcalibration\data\Ata01_14_realtime_interface')
+runRTanalysis

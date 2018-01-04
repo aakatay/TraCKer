@@ -6,7 +6,6 @@ function rtTrackSNR(varargin)
     dbgSaveR = 1;
     dbgSnapR = 1;
 % dbgSnap
-    isdbgAcquisition = 1; % generated input files for debug
     isCallOutside = 0;
     if nargin == 1
         isCallOutside = 1;
@@ -59,7 +58,9 @@ function rtTrackSNR(varargin)
     isTlog      = cfg.isTlog;
     timeOut     = cfg.timeOut;
     numFrm2Save = cfg.numFrm2Save; % # frames to save
-    numFrm2Snap = cfg.numFrm2Snap; % # frames to snap
+    numFrm2Snap = cfg.numFrm2Snap; % # frames to snap    
+    isdbgAcq    = cfg.isdbgAcquisition; % generated input files for debug
+    
     tic;
     if isTlog, logFN = cfg.logSNR; fid = fopen(logFN,'w'); c = onCleanup(@()fclose(fid)); wait = 0; end
     if isTlog, clck = clock; fprintf(fid,'start time m= %2i secs=%6.03f\n',clck(5),clck(6)); end
@@ -82,7 +83,7 @@ function rtTrackSNR(varargin)
     fname = fn_.fname0;
     fname = ['acq\' fname];   
     
-    if isdbgAcquisition
+    if isdbgAcq
         inputDIR = 'input\';
         inputFN_ = dir([inputDIR '*.tif']);
         inputFN = ['input\' inputFN_(1).name];
@@ -715,11 +716,11 @@ function rtTrackSNR(varargin)
     end
     function dbgAcquisition
         % emulate camera acquisition
-        if ~isdbgAcquisition, return; end
+        if ~isdbgAcq, return; end
         try
             IMGin = imread(inputFN,inputIx);
         catch % last frame
-            isdbgAcquisition = 0; return;
+            isdbgAcq = 0; return;
         end
         inputFN2  = sprintf('acq\\%s_%04i.tif',inputFN(7:end-4),inputIx);
         clckAcq = clock; clckAcqTime = clckAcq(4)*24+clckAcq(5)*60+clckAcq(6);
@@ -1018,7 +1019,7 @@ function rtTrackSNR(varargin)
                 
             end
             [SNRmovVoronoi,tPatch(nf)] = getVoronoinImg(figSNRvoronIMG,xys(:,1:2),SNr/sscale,szXY,mag,CM,EdgeColorSel);
-            imwrite(uint16(SNRmovVoronoi),SNRmovieVoronoiFN,'WriteMode','append','Compression', 'none') 
+            imwrite(uint16(SNRmovVoronoi(:,:,1)),SNRmovieVoronoiFN,'WriteMode','append','Compression', 'none') 
         end
     end
 

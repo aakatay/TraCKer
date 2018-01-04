@@ -69,7 +69,7 @@ isdbgAcquisition = 0;
     cfg.btnColDefault   = [0.9600 0.9600 0.9600 ]; % gray
     cfg.btnColPress     = [1.0 1.0 0.0]; % yellow
     cfg.btnColActive    = [0.1 0.9 0.1]; % green
-    cfg.btnColfrstData  = [0 1 1]; % light blue
+    cfg.btnColActive    = [0 1 1]
     
     % colors (lamps)
     cfg.lmpColStop      = [1 0 0 ]; % red
@@ -307,7 +307,7 @@ isdbgAcquisition = 0;
         if strcmp(get(btnStart0,'BackgroundColor'), cfg.btnColActive), return; end % already running
         btnStart = 0; save(btnMAT,'btnStart','-Append');
         
-        set(btnStart0,'BackgroundColor', cfg.btnColfrstData);
+        set(btnStart0,'BackgroundColor', );
         runSync
         %% remove directory
         if exist(fname0MAT),delete(fname0MAT); end
