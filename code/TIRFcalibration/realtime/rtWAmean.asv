@@ -114,7 +114,7 @@ function rtWAmean(varargin)
                         fdir=rdir([fnameDir fname0 '*.tif']);
                         [~,flast]=max(cell2mat({fdir.datenum}));
                         fnameSeq = fdir(flast).name; 
-                        n=sscanf(fnameSeq(numel(fnameDir)+1:end),[fname0 '%f.tif']);
+                        n=sscanf(fnameSeq,['acq\\' fname0 '%f.tif']);
                         nLast = n - waWin + 1;
                         fdbck.syncHere=1; save(syncFrameMAT,'nLast'); % process new image
                     end
@@ -185,13 +185,12 @@ function rtWAmean(varargin)
     
     function dbgWaitAcqTime(clck)
         %pauses for acqTime
-        %pause(1)
         %return
         sec0 = clck(5)*60+clck(6);
         while (1)
             clck = clock;
             sec = clck(5)*60+clck(6);
-            if (n<cfg.waWin) || (sec-sec0>=acqTime)
+            if n<cfg.waWin || sec-sec0>=acqTime
                 break
             end
         end

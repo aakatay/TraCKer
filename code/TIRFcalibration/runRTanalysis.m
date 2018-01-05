@@ -3,7 +3,7 @@
 % App Designer: WEB: https://www.mathworks.com/help/matlab/components-in-app-designer.html
 % image name: cy3_4nmBckgrnd_250ms_396pos_tilt8_shft3.5_[label]_0001.tif
 function runRTanalysis
-    isdbgAcquisition = 1;
+    isdbgAcquisition = 0;
     F = findall(0,'type','figure'); delete(F);
     %deleteALLparallelPools
     fclose('all');
@@ -80,7 +80,7 @@ function runRTanalysis
     
     %% folder structure
     if 1 
-        if exist('acq'), rmdir('acq', 's'); end; mkdir('acq')
+%        if exist('acq'), rmdir('acq', 's'); end; mkdir('acq')
         if exist('snapSaveOUT'), rmdir('snapSaveOUT', 's'); end; mkdir('snapSaveOUT')
         if exist('signals'), rmdir('signals', 's'); end; mkdir('signals')
         if exist(cfg.outDIR), rmdir(cfg.outDIR, 's'); end
@@ -328,12 +328,13 @@ function runRTanalysis
         
         %% assign filename 
         while (1) % wait till first file
-            fn=dir('acq\*.tif');
+            fn=dir('acq\**\*.tif');
             if isempty(fn), pause(0.1);continue; end
-            fname0_ = fn(1).name;
+            fname0_ = [fn(1).name];
             fname0 = fname0_(1:end-4); % remove .tif
             fname0 = fname0(1:end-ndigit); % remove seq number
-            save(fname0MAT,'fname0');
+            fnameDir = [fn(1).folder '\'];
+            save(fname0MAT,'fname0','fnameDir');
             break;
         end
         
@@ -356,7 +357,7 @@ function runRTanalysis
              
         %% save 'cfgRT.mat'
         cfg.label = label; 
-        iminf = imfinfo(['acq\' fname0_]);
+        iminf = imfinfo([fnameDir fname0_]);
         if isempty(cfg.crop)
             cfg.w = iminf.Width;
             cfg.h = iminf.Height;

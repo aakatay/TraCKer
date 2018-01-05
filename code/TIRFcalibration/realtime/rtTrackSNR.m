@@ -79,9 +79,10 @@ function rtTrackSNR(varargin)
     
     %% input files
     traceFN = 'waSeq\tracker\rtData\traceData_';
-    fn_ = load('fname0'); % filename_WA_
-    fname = fn_.fname0;
-    fname = ['acq\' fname];   
+    fname0_ = load('fname0');% filename_WA_
+    fname0 = fname0_.fname0;
+    fnameDir = fname0_.fnameDir;
+    fname = [fnameDir fname0];
     
     if isdbgAcq
         inputDIR = 'input\';
