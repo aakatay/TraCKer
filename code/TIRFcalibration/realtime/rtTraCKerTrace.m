@@ -4,7 +4,7 @@ function rtTraCKerTrace(varargin)
 %cd('E:\MATLAB\TIRFcalibration\data\Ata01_5_125X100Y50x50_realtime'); 
 
 % FASTER: try cuda for ismember function in factorFast1()
-
+bugCounter = 0;
     isCallOutside = 0;
     if nargin == 1
         isCallOutside = 1;
@@ -191,6 +191,7 @@ tprm0 = toc; % vvvvvvvvvvvvvvvvvvvvvvvvv
         if isStop
             if exist('fid'), fclose(fid);end
             lmpState = -1; save(MATrtTraCKerTrace,'lmpState','-append'); % stop
+            cd('../../'); save('bugCounter_rtTraCKerTrace','bugCounter','bugFrame')
             break;
         end
         posfn = posFN.name;
@@ -277,7 +278,13 @@ tprm01 = toc;% vvvvvvvvvvvvvvvvvvvvvvvvv
             ycrC = [ycrC YC(ixc)];
 
             %tix_ = find(ismember(ixtp,ixp)); % check traces in prev frame
-            tix = ixtp(ixp); % check traces in prev frame
+            try
+                tix = ixtp(ixp); % check traces in prev frame
+            catch
+                bugCounter = bugCounter + 1;
+                bugFrame(bugCounter) = n;
+                continue; % BUG cc=32;
+            end
             if  ~isnan(tix) % add to the trace
                 %tix = ixtp(tix_);
 

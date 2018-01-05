@@ -3,7 +3,7 @@
 % App Designer: WEB: https://www.mathworks.com/help/matlab/components-in-app-designer.html
 % image name: cy3_4nmBckgrnd_250ms_396pos_tilt8_shft3.5_[label]_0001.tif
 function runRTanalysis
-isdbgAcquisition = 0;
+    isdbgAcquisition = 1;
     F = findall(0,'type','figure'); delete(F);
     %deleteALLparallelPools
     fclose('all');

@@ -854,118 +854,6 @@ function rtTrackSNR(varargin)
         end
     end
 
-    function runSNRplot
-        %% SNR plot
-        figSNRplot = figure(201);
-        SNR2d = reshape(SNRimg,[szXYmag(2)*szXYmag(1) nfr]);
-        SNR2dSUM = sum(SNR2d,1);
-        SNR2dNUM = sum(SNR2d>0,1);
-        snrmean = SNR2dSUM./SNR2dNUM;
-
-        plot(snrmean); 
-        title('SNR mean')
-        xlabel('frames')
-        ylabel('SNR')   
-        imgFig = getframe(gcf);
-        imgOut = imgFig.cdata;
-        imwrite(imgOut,SNRplotFN);
-    end
-    
-    function runSNRstdPlot
-        %% SNR std plot
-        figSNRstdPlot = figure(202);
-        SNR2d = reshape(SNRimg,[szXYmag(2)*szXYmag(1) nfr]);
-        SNR2dSTD = std(SNR2d,1);
-
-        plot(SNR2dSTD); 
-        title('SNR STD')
-        xlabel('frames')
-        ylabel('SNR STD')   
-        imgFig = getframe(gcf);
-        imgOut = imgFig.cdata;
-        imwrite(imgOut,snrSTDplotFN);
-    end
-
-    function runNumSMplot
-        %% number of SM plot
-        figNumSMplot = figure(204);
-        plot(num_ixImg2);
-        title('number of SM for SNR reading')
-        xlabel('frames')
-        ylabel('Number of Single Molecules')   
-        imgFig = getframe(gcf);
-        imgOut = imgFig.cdata;
-        imwrite(imgOut,numSMplotFN);
-    end    
-
-    function runIntensityTracesRT
-        %% intensity traces
-        hold on;
-        %load(SMdataFN); % 'Xs','Ys','Frm','TRinf','B','INT','SNR','MIX');
-        smix = unique(MIX); % # selected SM
-        if isempty(smix), return; end
-        if smix(1)==0, smix(1)=[]; end % remove zero
-        ns = numel(smix);
-
-        intShft = 10e4;
-        intShft = 0;
-        ixs = [];
-        for i = 1:ns
-            ix = smix(i); % SM index
-            mix = find(MIX==ix);
-            frm = Frm(mix);
-            FRM(i)=numel(frm);
-            %if numel(frm)<217,continue; end
-            ixs = [ixs ix];
-            int = INT(mix);
-            INTsave(:,i) = int;
-            plot(frm,int+intShft*(i-1));
-        end
-        save('SNRintTraces','INTsave','frm','ixs')
-        savefig('SNRintTraces');
-        hold off;
-    end
-
-    function runIntensityTraces
-        %% intensity traces
-        figIntensityTraces = figure(1212); maximize;clf;
-        hold on;
-        %load(SMdataFN); % 'Xs','Ys','Frm','TRinf','B','INT','SNR','MIX');
-        smix = unique(MIX); % # selected SM
-        if smix(1)==0, smix(1)=[]; end % remove zero
-
-        smixSel = [11 14 16 21];
-        ns = numel(smix);
-        ns2 = 0;
-        ns3 = 0;
-        FRM = [];
-        intShft = 10e4;
-        intShft = 0;
-        ixs = [];
-        for i = 1:ns
-            ixc = smix(i); % SM index
-            mix = find(MIX==ixc);
-            frm = Frm(mix);
-            FRM(i)=numel(frm);
-            if numel(frm)<100,continue; end
-            if numel(frm)<217,continue; end
-
-            ns2 = ns2 + 1;
-            %if ~ismember(ns2,smixSel),continue; end;
-            ns3= ns3+1;
-            ixs = [ixs ixc];
-            int = INT(mix);
-            INTsave(:,ns3) = int;
-            subplot(4,1,ns3)
-            plot(frm,int+intShft*(ns3-1));
-            ylim([0 max(int)*1.2])
-            pause(0.5)
-        end
-        save('SNRintTraces','INTsave','frm','ixs')
-        savefig('SNRintTraces');
-        hold off;
-    end
-
 
 %% ============ Analysis ===================================================
     function dispTraceInt
@@ -1064,6 +952,96 @@ function rtTrackSNR(varargin)
         fclose(fid2);
     end
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+%% old
+    function runIntensityTracesRT
+        %% intensity traces
+        hold on;
+        %load(SMdataFN); % 'Xs','Ys','Frm','TRinf','B','INT','SNR','MIX');
+        smix = unique(MIX); % # selected SM
+        if isempty(smix), return; end
+        if smix(1)==0, smix(1)=[]; end % remove zero
+        ns = numel(smix);
+
+        intShft = 10e4;
+        intShft = 0;
+        ixs = [];
+        for i = 1:ns
+            ix = smix(i); % SM index
+            mix = find(MIX==ix);
+            frm = Frm(mix);
+            FRM(i)=numel(frm);
+            %if numel(frm)<217,continue; end
+            ixs = [ixs ix];
+            int = INT(mix);
+            INTsave(:,i) = int;
+            plot(frm,int+intShft*(i-1));
+        end
+        save('SNRintTraces','INTsave','frm','ixs')
+        savefig('SNRintTraces');
+        hold off;
+    end
+
+    function runIntensityTraces
+        %% intensity traces
+        figIntensityTraces = figure(1212); maximize;clf;
+        hold on;
+        %load(SMdataFN); % 'Xs','Ys','Frm','TRinf','B','INT','SNR','MIX');
+        smix = unique(MIX); % # selected SM
+        if smix(1)==0, smix(1)=[]; end % remove zero
+
+        smixSel = [11 14 16 21];
+        ns = numel(smix);
+        ns2 = 0;
+        ns3 = 0;
+        FRM = [];
+        intShft = 10e4;
+        intShft = 0;
+        ixs = [];
+        for i = 1:ns
+            ixc = smix(i); % SM index
+            mix = find(MIX==ixc);
+            frm = Frm(mix);
+            FRM(i)=numel(frm);
+            if numel(frm)<100,continue; end
+            if numel(frm)<217,continue; end
+
+            ns2 = ns2 + 1;
+            %if ~ismember(ns2,smixSel),continue; end;
+            ns3= ns3+1;
+            ixs = [ixs ixc];
+            int = INT(mix);
+            INTsave(:,ns3) = int;
+            subplot(4,1,ns3)
+            plot(frm,int+intShft*(ns3-1));
+            ylim([0 max(int)*1.2])
+            pause(0.5)
+        end
+        save('SNRintTraces','INTsave','frm','ixs')
+        savefig('SNRintTraces');
+        hold off;
+    end
 
 
 end
