@@ -9,7 +9,9 @@ function runRTanalysis
     fclose('all');
     gcp
     % input param
-    ndigit = 4;
+    ndigit = 9;
+    extensionFN = '_Default_000.tif'; % ie img_000000001_Default_000
+    nExtensionFN = numel(extensionFN); 
     bc = 4; % [nM] background concentration (for Coeff detection)
     acqTime = 1;% [s]
     acqTime = .4;% [s]
@@ -331,10 +333,10 @@ function runRTanalysis
             fn=dir('acq\**\*.tif');
             if isempty(fn), pause(0.1);continue; end
             fname0_ = [fn(1).name];
-            fname0 = fname0_(1:end-4); % remove .tif
+            fname0 = fname0_(1:end-nExtensionFN); % remove .tif
             fname0 = fname0(1:end-ndigit); % remove seq number
             fnameDir = [fn(1).folder '\'];
-            save(fname0MAT,'fname0','fnameDir');
+            save(fname0MAT,'fname0','fnameDir','extensionFN');
             break;
         end
         
@@ -346,12 +348,12 @@ function runRTanalysis
                 j=j+1;
             end
         end
-        last_1 = last_(end-1);
-        last_2 = last_(end);
 
-        if ~exist('last_')
+        if numel(last_)<2
             label = [];
         else
+            last_1 = last_(end-1);
+            last_2 = last_(end);
             label= fname0(last_1+1:last_2-1);
         end
              

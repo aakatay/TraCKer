@@ -25,6 +25,7 @@ function rtWAmean(varargin)
     %% set filenames and array
     fname0_ = load('fname0');
     fname0 = fname0_.fname0;
+    fnameEx = fname0_.extensionFN;
     fnameDir = fname0_.fnameDir;
         % reads the position of crop from the filename
         
@@ -65,25 +66,12 @@ function rtWAmean(varargin)
     tout =[]; % timeout
     while (1)
         %pause(0.2)
-        if 0 && n == nSync % wait for sync signal
-            while ~exist('syncSignal.txt')
-                D = dir([fname0 '*.tif']);
-                CD = struct2cell(D);
-                dates = cell2mat(CD(6,:));
-                [~,ix]=sort(dates);
-                lastFn = D(ix(end)).name;
-                lastn = str2num(lastFn(end-ndigit-3:end-4));
-                nJump = lastn - nSync;
-                save('logData\syncJump','nJump');
-                n = lastn;
-            end
-        end
         
         if isTlog, time = toc; fprintf(fid,'while loop n=%3i time=%6.03f\n',n,time); end
         %tl(n) = toc;
         while (1) % wait for update
             dbgWaitAcqTime(clck)
-            fnameSeq = [fnameDir fname0 num2str(n,digitFormat) '.tif'];
+            fnameSeq = [fnameDir fname0 num2str(n,digitFormat) fnameEx];
             b_=tryLoadbtnMAT(sprintf('out=load(''%s'');',btnMAT),cfg.tTryLoop); btnStart = b_.btnStart; btnSync = b_.btnSync; btnSnap = b_.btnSnap; btnSave = b_.btnSave; btnStop = b_.btnStop; 
             if btnStop >= 0
                 isStop = 1;
@@ -111,10 +99,10 @@ function rtWAmean(varargin)
                             fdbck.syncWait = 0;
                         end
                     elseif btnSync==1
-                        fdir=rdir([fnameDir fname0 '*.tif']);
+                        fdir=rdir([fnameDir fname0 '*' fnameEx]);
                         [~,flast]=max(cell2mat({fdir.datenum}));
                         fnameSeq = fdir(flast).name; 
-                        n=sscanf(fnameSeq(numel(fnameDir)+1:end),[fname0 '%f.tif']);
+                        n=sscanf(fnameSeq(numel(fnameDir)+1:end),[fname0 '%f' fnameEx]);
                         nLast = n - waWin + 1;
                         fdbck.syncHere=1; save(syncFrameMAT,'nLast'); % process new image
                     end

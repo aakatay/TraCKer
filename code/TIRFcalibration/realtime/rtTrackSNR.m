@@ -82,6 +82,7 @@ function rtTrackSNR(varargin)
     fname0_ = load('fname0');% filename_WA_
     fname0 = fname0_.fname0;
     fnameDir = fname0_.fnameDir;
+    fnameEx = fname0_.extensionFN;
     fname = [fnameDir fname0];
     
     if isdbgAcq
@@ -216,7 +217,7 @@ function rtTrackSNR(varargin)
     end
     
     %% first frame
-    fnameSeq = [fname num2str(1,digitFormat) '.tif'];
+    fnameSeq = [fname num2str(1,digitFormat) fnameEx];
     Afrst = imread(fnameSeq);
     Afrst = padarray(Afrst,[s s]);
     
@@ -415,7 +416,7 @@ function rtTrackSNR(varargin)
         %% PROCESS FRAME ===========================================================
         if dbgSNRimg, snrIMG = zeros(szXYmag); end
         
-        fnameSeq = [fname num2str(n,digitFormat) '.tif'];
+        fnameSeq = [fname num2str(n,digitFormat) fnameEx];
         A = imread(fnameSeq);
         A = padarray(A,[s s]);
         IX = find((frm1<=nf) .* (nf<=frm2));
