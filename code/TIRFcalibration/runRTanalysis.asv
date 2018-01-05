@@ -6,7 +6,7 @@
 
 % RUN upper folder of acq\
 function runRTanalysis
-    isdbgAcquisition = 1;
+    isdbgAcquisition = 0;
     F = findall(0,'type','figure'); delete(F);
     %deleteALLparallelPools
     fclose('all');
@@ -69,8 +69,8 @@ function runRTanalysis
     cfg.SnapNumFrames = 30;  % [frames]
     cfg.SaveNumFrames = 60;  % [frames]
     cfg.isdbgAcquisition    = isdbgAcquisition;
-    cfg.dbgAcqFN            = 'img_';
-    cfg.dbgAcqDIR           = [cfg.acqDIR 'acq_1\'];
+    cfg.dbgAcqFN            = dbgAcqFN;
+    cfg.dbgAcqDIR           = 'acq\';
     cfg.dbgAcqFNex          = '_Default_000.tif';
     
     % colors (buttons)
@@ -87,10 +87,8 @@ function runRTanalysis
     cfg.lmpColActive    = [0 1 0]; % green
     
     %% folder structure
-    if isdbgAcquisition
-        if exist('acq'), rmdir('acq', 's'); end; mkdir('acq'); mkdir(cfg.dbgAcqDIR)
-    end
     if 1 
+%        if exist('acq'), rmdir('acq', 's'); end; mkdir('acq')
         if exist('snapSaveOUT'), rmdir('snapSaveOUT', 's'); end; mkdir('snapSaveOUT')
         if exist('signals'), rmdir('signals', 's'); end; mkdir('signals')
         if exist(cfg.outDIR), rmdir(cfg.outDIR, 's'); end
@@ -333,10 +331,6 @@ function runRTanalysis
             inputFN = ['input\' inputFN0];
             IMGin = imread(inputFN,1);
             inputFN2  = sprintf('acq\\%s_%04i.tif',inputFN0(1:end-4),1);
-            
-            digitFormat = sprintf('''%%0%1ii''',ndigit);
-            inputIxTXT = eval(['sprintf(' digitFormat ',1)'] );
-            inputFN2  = [cfg.dbgAcqDIR cfg.dbgAcqFN inputIxTXT cfg.dbgAcqFNex];
             imwrite(IMGin,inputFN2);
         end
         

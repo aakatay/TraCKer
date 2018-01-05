@@ -60,12 +60,16 @@ function rtTrackSNR(varargin)
     numFrm2Save = cfg.numFrm2Save; % # frames to save
     numFrm2Snap = cfg.numFrm2Snap; % # frames to snap    
     isdbgAcq    = cfg.isdbgAcquisition; % generated input files for debug
+    dbgAcqFN    = cfg.dbgAcqFN;
+    dbgAcqDIR   = cfg.dbgAcqDIR;
+    dbgAcqFNex   = cfg.dbgAcqFNex;
     
     tic;
     if isTlog, logFN = cfg.logSNR; fid = fopen(logFN,'w'); c = onCleanup(@()fclose(fid)); wait = 0; end
     if isTlog, clck = clock; fprintf(fid,'start time m= %2i secs=%6.03f\n',clck(5),clck(6)); end
 
     digitFormat = sprintf('%%0%1ii',ndigit);
+    digitFormat2 = sprintf('''%%0%1ii''',ndigit);
     s = floor(wsz/2); 
     s2 = floor(wsz2/2); 
     scrnSzIn = [1600 900];
@@ -89,6 +93,7 @@ function rtTrackSNR(varargin)
         inputDIR = 'input\';
         inputFN_ = dir([inputDIR '*.tif']);
         inputFN = ['input\' inputFN_(1).name];
+        inputFN0 = inputFN(7:end-4);
         inputIx = 2;
         clckAcqTime0 = 0;
         clckPauseTime0 = 0;
@@ -724,7 +729,9 @@ function rtTrackSNR(varargin)
         catch % last frame
             isdbgAcq = 0; return;
         end
-        inputFN2  = sprintf('acq\\%s_%04i.tif',inputFN(7:end-4),inputIx);
+        inputIxTXT = eval(['sprintf(' digitFormat2 ',inputIx)'] );
+        inputFN2  = [dbgAcqDIR dbgAcqFN inputIxTXT dbgAcqFNex];
+        
         clckAcq = clock; clckAcqTime = clckAcq(4)*24+clckAcq(5)*60+clckAcq(6);
         clckPause = clock; clckPauseTime = clckPause(4)*24+clckPause(5)*60+clckPause(6);
         if inputIx<cfg.waWin || clckAcqTime - clckAcqTime0 > cfg.acqTime % generate input image
