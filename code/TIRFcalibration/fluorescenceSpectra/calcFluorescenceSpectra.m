@@ -1,4 +1,4 @@
-% called by dispFluorescenceSpectra.m
+% called by fluorescenceSpectra.m
 %% calculates transmission of the spectra for each channel
 % m : emission
 % x : excitation
@@ -155,7 +155,6 @@ end
 
 
 save(fnChanInt,'chls','chfl','flx')
-
 
 
 

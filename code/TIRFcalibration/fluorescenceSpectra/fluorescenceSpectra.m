@@ -1,4 +1,4 @@
-function [mnmx] = dispFluorescenceSpectra(varargin)
+function [mnmx] = fluorescenceSpectra(varargin)
 % called by callFluorescenceSpectra.m
 % m : emission
 % x : excitation
@@ -12,12 +12,14 @@ function [mnmx] = dispFluorescenceSpectra(varargin)
     fq = varargin{2};
     fl = varargin{3};
     ls = varargin{4};
-    disp = varargin{5};
-    isBRT = varargin{6};
-    isCy3 = varargin{7};
+    sys = varargin{5};
+    disp = varargin{6};
+    isBRT = varargin{7};
+    isCy3 = varargin{8};
+    dataFN = varargin{9};
     isInterp = 0;
-    if nargin > 7 % calcFluorescenceSpectra
-        mnmx = varargin{8};
+    if nargin > 9 % calcFluorescenceSpectra
+        mnmx = varargin{10};
         mn = mnmx(1);
         mx = mnmx(2);
         isInterp = 1;
@@ -192,17 +194,17 @@ function [mnmx] = dispFluorescenceSpectra(varargin)
     end
     
     
-    % calcFluorescenceSpectra
+    %% calcFluorescenceSpectra
     if isInterp % 2nd call
         mnmx = [];
         calcFluorescenceSpectra
-        
+        dispChanIntensity
         figure(702)
         savefig(FIGoutFN)
         imgFig = getframe(gcf);
         imgOut = imgFig.cdata;
         imwrite(imgOut,imgFout);
-    else
+    else % first run
         minx = max([minfcX minflX minfqdX]);
         maxx = min([maxfcX maxflX maxfqdX]);
         mnmx = [minx maxx];

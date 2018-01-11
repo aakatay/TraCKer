@@ -1,22 +1,23 @@
 % called by fluorescenceSpectra.m
 % displays intensity bleed throughs
+close all;
 
 % output
-imgFout2 = 'SNRchannelLaserFluo.tif';
+imgFout = 'SNRchannelLaserFluo.tif';
 MAToutFN  = 'SNRchannelLaserFluo.mat';
 if isBRT
-    imgFout2 = ['BRT-' imgFout2];
+    imgFout = ['BRT-' imgFout];
     MAToutFN = ['BRT-' MAToutFN];
 else
-    imgFout2 = ['PRB-' imgFout2];
+    imgFout = ['PRB-' imgFout];
     MAToutFN = ['PRB-' MAToutFN];
 end
    
 if isCy3
-    imgFout2 = ['CY3-' imgFout2];
+    imgFout = ['CY3-' imgFout];
     MAToutFN = ['CY3-' MAToutFN];
 else
-    imgFout2 = ['GFP-' imgFout2];
+    imgFout = ['GFP-' imgFout];
     MAToutFN = ['GFP-' MAToutFN];
 end 
 
@@ -56,7 +57,7 @@ am = a*1i;
 ax = a*1i;
 
 % 
-G=imread([dataFN '\channelLaserFluoGRID.tif']);
+G=imread([dataFN '\channelLaserFluoGRID.tif');
 figure(62);imagesc(G); axis image;
 
 
@@ -102,15 +103,15 @@ colormap('gray')
 
 %% save 
         
-if exist(imgFout2),delete(imgFout2); end
+if exist(imgFout),delete(imgFout); end
 figure(63)
 imgFig = getframe(gcf);
 imgOut = imgFig.cdata;
-imwrite(imgOut,imgFout2,'WriteMode','append','Compression', 'none') 
+imwrite(imgOut,imgFout,'WriteMode','append','Compression', 'none') 
 figure(62)
 imgFig = getframe(gcf);
 imgOut = imgFig.cdata;
-imwrite(imgOut,imgFout2,'WriteMode','append','Compression', 'none') 
+imwrite(imgOut,imgFout,'WriteMode','append','Compression', 'none') 
 
 save(MAToutFN,'am','ax','A');
 if 0
